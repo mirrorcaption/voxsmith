@@ -256,6 +256,75 @@ function checkBasicAuth(request: Request, env: Env): Response | null {
   });
 }
 
+interface CloudflareAIResponse {
+  result?: { text?: string; transcription_text?: string };
+  success?: boolean;
+  errors?: Array<{ message?: string }>;
+}
+
+async function handleTranscribeDirect(request: Request): Promise<Response> {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_AUDIO_BYTES) {
+    return Response.json({ error: "Audio too large. Limit is 25 MB." }, { status: 413 });
+  }
+
+  const accountId = (request.headers.get("x-cf-account-id") ?? "").trim();
+  const apiToken = (request.headers.get("x-cf-api-token") ?? "").trim();
+  if (!accountId || !apiToken) {
+    return Response.json(
+      { error: "Missing X-CF-Account-Id or X-CF-Api-Token header" },
+      { status: 400 },
+    );
+  }
+
+  const audioBuffer = await request.arrayBuffer();
+  if (audioBuffer.byteLength === 0) {
+    return Response.json({ error: "Empty audio body." }, { status: 400 });
+  }
+
+  const url = new URL(request.url);
+  const vocabRaw = url.searchParams.get("vocab")?.trim();
+  const initialPrompt = vocabRaw
+    ? buildInitialPrompt(vocabRaw.slice(0, MAX_PROMPT_CHARS))
+    : undefined;
+
+  const base64 = arrayBufferToBase64(audioBuffer);
+  const body: Record<string, string> = { audio: base64, task: "transcribe" };
+  if (initialPrompt) body.initial_prompt = initialPrompt;
+
+  const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${WHISPER_MODEL}`;
+  const upstream = await fetch(cfUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  let data: CloudflareAIResponse | null = null;
+  try {
+    data = (await upstream.json()) as CloudflareAIResponse;
+  } catch {
+    // fall through with data = null
+  }
+
+  if (!upstream.ok || !data || data.success === false) {
+    const message =
+      data?.errors?.[0]?.message ?? `HTTP ${upstream.status} ${upstream.statusText}`;
+    return Response.json({ error: message }, { status: upstream.status || 502 });
+  }
+
+  const text = (data.result?.text ?? data.result?.transcription_text ?? "").trim();
+  return Response.json({
+    text,
+    raw: text,
+    mode: "raw" as Mode,
+    refined: false,
+    label: "直连 · 你的额度",
+  });
+}
+
 async function handleTranscribe(request: Request, env: Env): Promise<Response> {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_AUDIO_BYTES) {
@@ -314,6 +383,18 @@ export default {
       }
       try {
         return await handleTranscribe(request, env);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        return Response.json({ error: message }, { status: 500 });
+      }
+    }
+
+    if (url.pathname === "/api/transcribe-direct") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      try {
+        return await handleTranscribeDirect(request);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
         return Response.json({ error: message }, { status: 500 });

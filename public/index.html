@@ -747,47 +747,28 @@
         badge.classList.toggle("active", !!creds);
       }
 
-      function blobToBase64(blob) {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result || "";
-            const comma = result.indexOf(",");
-            resolve(comma >= 0 ? result.slice(comma + 1) : result);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      }
-
       async function uploadDirect(blob, creds, vocabItems) {
-        const base64 = await blobToBase64(blob);
-        const body = { audio: base64, task: "transcribe" };
+        const params = new URLSearchParams();
         if (vocabItems && vocabItems.length) {
-          body.initial_prompt = buildVocabPrompt(vocabItems);
+          params.set("vocab", buildVocabPrompt(vocabItems));
         }
-        const url =
-          "https://api.cloudflare.com/client/v4/accounts/" +
-          encodeURIComponent(creds.accountId) +
-          "/ai/run/@cf/openai/whisper-large-v3-turbo";
-        const res = await fetch(url, {
+        const qs = params.toString() ? "?" + params.toString() : "";
+        const res = await fetch("/api/transcribe-direct" + qs, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + creds.token,
+            "Content-Type": blob.type || "audio/webm",
+            "X-CF-Account-Id": creds.accountId,
+            "X-CF-Api-Token": creds.token,
           },
-          body: JSON.stringify(body),
+          body: blob,
         });
         let data = null;
         try { data = await res.json(); } catch {}
-        if (!res.ok || !data || data.success === false) {
-          const msg =
-            (data && data.errors && data.errors[0] && data.errors[0].message) ||
-            ("HTTP " + res.status + " " + res.statusText);
+        if (!res.ok) {
+          const msg = (data && data.error) || ("HTTP " + res.status + " " + res.statusText);
           throw new Error(msg);
         }
-        const result = data.result || {};
-        return result.text || result.transcription_text || "";
+        return (data && (data.text || data.transcription_text)) || "";
       }
 
       function setStatus(html, kind) {
