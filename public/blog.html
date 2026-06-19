@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3 步搭一个属于自己的语音转写小工具</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07070b;
+        --panel: rgba(18, 19, 28, 0.78);
+        --panel-solid: #11121b;
+        --fg: #ECECF3;
+        --muted: #888EA3;
+        --faint: #5A5F73;
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.14);
+        --accent: #6E7BFF;
+        --accent-2: #4DA6FF;
+        --accent-grad: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);
+        --warn: #FFB155;
+        --danger: #FF5470;
+        --ok: #34D399;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        background:
+          radial-gradient(900px 480px at 15% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
+          radial-gradient(760px 420px at 100% 110%, rgba(77, 141, 255, 0.16), transparent 60%),
+          var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.75;
+        font-size: 16px;
+        padding: 40px 20px 96px;
+      }
+      article { max-width: 680px; margin: 0 auto; }
+      header.hero {
+        margin-bottom: 40px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--line);
+      }
+      .kicker {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em;
+        text-transform: uppercase; color: var(--muted);
+        margin-bottom: 14px;
+      }
+      .kicker .bead {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--accent-grad);
+        box-shadow: 0 0 12px rgba(110, 123, 255, 0.9);
+      }
+      h1 {
+        font-size: 32px;
+        line-height: 1.2;
+        margin: 0 0 14px;
+        letter-spacing: -0.02em;
+        font-weight: 750;
+      }
+      .lede { color: var(--muted); font-size: 16px; margin: 0; }
+      h2 {
+        font-size: 21px;
+        margin: 48px 0 14px;
+        letter-spacing: -0.01em;
+        font-weight: 700;
+        display: flex; align-items: center; gap: 12px;
+      }
+      h2 .step {
+        flex: 0 0 auto;
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        background: var(--accent-grad);
+        color: white; font-size: 14px; font-weight: 700;
+        box-shadow: 0 8px 20px -8px rgba(110, 123, 255, 0.9);
+      }
+      p { margin: 12px 0; }
+      p.note { color: var(--muted); font-size: 14.5px; }
+      ul { padding-left: 22px; margin: 12px 0; }
+      li { margin: 6px 0; }
+      a { color: var(--accent-2); text-decoration: none; border-bottom: 1px solid rgba(77, 166, 255, 0.3); }
+      a:hover { border-bottom-color: var(--accent-2); }
+      code {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        padding: 1px 7px;
+        border-radius: 6px;
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 13.5px;
+      }
+      .crumbs {
+        background: var(--panel-solid);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin: 14px 0;
+        font-size: 13.5px;
+        color: var(--fg);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+      }
+      .crumbs span { color: var(--muted); }
+      .crumbs strong { color: var(--fg); font-weight: 650; }
+
+      pre {
+        background: var(--panel-solid);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 16px;
+        overflow-x: auto;
+        font-size: 13.5px;
+        line-height: 1.6;
+        margin: 12px 0;
+        color: #d8dae5;
+      }
+      pre code { background: none; border: 0; padding: 0; font-size: 13.5px; }
+
+      details.alt {
+        margin: 24px 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 0 18px;
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+      }
+      details.alt > summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 14px 0;
+        font-size: 15px;
+        font-weight: 650;
+        color: var(--fg);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      details.alt > summary::-webkit-details-marker { display: none; }
+      details.alt > summary::before {
+        content: "▸";
+        color: var(--muted);
+        font-size: 11px;
+        transition: transform 0.15s;
+      }
+      details.alt[open] > summary::before { transform: rotate(90deg); }
+      details.alt > summary .tag {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 2px 8px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        margin-left: auto;
+      }
+      details.alt[open] {
+        padding-bottom: 14px;
+      }
+      details.alt > *:not(summary) { font-size: 14.5px; }
+      details.alt h3 {
+        font-size: 14.5px;
+        margin: 16px 0 6px;
+        color: var(--accent-2);
+        font-weight: 650;
+      }
+
+      .deploy-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 14px 22px;
+        background: var(--accent-grad);
+        color: white !important;
+        border: 0;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        box-shadow: 0 14px 34px -12px rgba(110, 123, 255, 0.9),
+                    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        margin: 8px 0 4px;
+      }
+      .deploy-btn:hover {
+        box-shadow: 0 18px 42px -12px rgba(110, 123, 255, 1),
+                    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+        border-bottom-color: transparent;
+      }
+      .deploy-btn::before {
+        content: ""; width: 10px; height: 10px; border-radius: 50%;
+        background: #fff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+      }
+
+      .callout {
+        background: var(--panel);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 14px;
+        padding: 14px 18px;
+        margin: 20px 0;
+        font-size: 15px;
+      }
+      .callout p:first-child { margin-top: 0; }
+      .callout p:last-child { margin-bottom: 0; }
+      .callout.ok { border-left-color: var(--ok); }
+      .callout.warn {
+        border-left-color: var(--warn);
+        background: linear-gradient(135deg, rgba(255, 177, 85, 0.08), rgba(255, 84, 112, 0.06));
+      }
+      .callout.danger {
+        border-left-color: var(--danger);
+        background: linear-gradient(135deg, rgba(255, 84, 112, 0.12), rgba(255, 84, 112, 0.04));
+      }
+      .callout .label {
+        display: inline-block;
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--warn); margin-bottom: 4px;
+      }
+      .callout.danger .label { color: var(--danger); }
+      .callout.ok .label { color: var(--ok); }
+
+      footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--faint);
+        font-size: 13.5px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <article>
+      <header class="hero">
+        <div class="kicker"><span class="bead"></span><span>动手指南</span></div>
+        <h1>3 步搭一个属于自己的语音转写小工具</h1>
+        <p class="lede">
+          不用装任何软件,不用碰命令行,全程都在浏览器里点鼠标。
+          5 分钟以后你就拥有一个"按一下说话 → 自动转成文字 → 自动复制"的小窗口工具,
+          挂在自己的 Cloudflare 账号上,全球都能访问。
+        </p>
+      </header>
+
+      <div class="callout">
+        <p>
+          下面这个三步法是<strong>新手推荐路线</strong> —— 借助 GitHub 一键同步,
+          不用装任何软件、不用碰命令行。如果你不想注册 GitHub,
+          也可以看文末的<a href="#alt">另一种方式(命令行版)</a>。
+        </p>
+      </div>
+
+      <h2><span class="step">1</span>注册两个免费账号</h2>
+      <p>如果你没有这两个,先去注册一下,都是免费的、邮箱注册即可,不需要绑卡:</p>
+      <ul>
+        <li>
+          <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">Cloudflare</a>
+          —— 用来跑这个小工具的"地基"
+        </li>
+        <li>
+          <a href="https://github.com/signup" target="_blank" rel="noreferrer">GitHub</a>
+          —— 用来存放项目代码,Cloudflare 会从这里拉取
+        </li>
+      </ul>
+      <p class="note">两个账号都已经有了的话,直接看下一步。</p>
+
+      <h2><span class="step">2</span>点一下"一键部署"按钮</h2>
+      <p>点下面这个按钮,在新窗口里打开:</p>
+      <p>
+        <a class="deploy-btn"
+           href="https://deploy.workers.cloudflare.com/?url=https://github.com/&lt;作者&gt;/cf-whisper-demo"
+           target="_blank" rel="noreferrer">
+          一键部署到 Cloudflare
+        </a>
+      </p>
+      <p>接下来会看到一系列网页,按提示点就好:</p>
+      <ul>
+        <li>先登录 Cloudflare(如果还没登)</li>
+        <li>授权连接 GitHub,它会把项目代码复制到你自己的 GitHub 账号下一份</li>
+        <li>选你要部署到的 Cloudflare 账号 → 点 <strong>Deploy</strong></li>
+      </ul>
+      <p>
+        然后等大约 1 分钟,Cloudflare 会自己在云端把项目编译并部署好,
+        最后给你一个网址,大概长这样:<br />
+        <code>https://cf-whisper-demo.你的名字.workers.dev</code>
+      </p>
+      <p class="note">
+        这一步把整个项目复制到了你自己的账号下 —— 以后是<strong>你的</strong>项目,
+        作者改不了、看不到你录的内容。
+      </p>
+
+      <h2><span class="step">3</span>⚠️ 给项目设一个访问密码(<strong>务必完成</strong>)</h2>
+      <div class="callout danger">
+        <span class="label">⚠ 重要安全提示</span>
+        <p>
+          刚部署出来的网址<strong>全世界任何人都能打开使用</strong>。
+          别人录的音会消耗你 Cloudflare 账号的免费额度,严重时可能产生费用。
+          <strong>这一步不是可选,一定要做。</strong>
+        </p>
+      </div>
+      <p>在浏览器里,按下面这条路径点过去:</p>
+      <div class="crumbs">
+        <strong>Cloudflare 后台</strong>
+        <span>›</span>
+        <strong>Workers &amp; Pages</strong>
+        <span>›</span>
+        <strong>cf-whisper-demo</strong>
+        <span>›</span>
+        <strong>Settings</strong>
+        <span>›</span>
+        <strong>Variables and Secrets</strong>
+      </div>
+      <p>
+        点 <strong>+ Add</strong>,在弹窗里:
+      </p>
+      <ul>
+        <li>类型选 <strong>Secret</strong></li>
+        <li>名称填:<code>BASIC_AUTH_PASSWORD</code>(一字不差)</li>
+        <li>值填:你自己想用的密码 —— 建议长一点,比如一句话拼起来</li>
+        <li>点 <strong>Deploy</strong> 保存</li>
+      </ul>
+      <p>
+        保存以后立即生效。再次打开你的网址,浏览器会弹一个登录框,
+        用户名随便填(留空也行),密码就是你刚才设的那个。
+      </p>
+      <div class="callout ok">
+        <span class="label">✓ 大功告成</span>
+        <p>
+          现在这个网址就是你的私人工具了。
+          收藏成书签,手机也能直接打开用,密码记到密码管理器里就行。
+        </p>
+      </div>
+
+      <h2>怎么用</h2>
+      <ul>
+        <li><strong>按一下"开始说话"</strong> → 开始录音,再按一下停止</li>
+        <li>停止后会自动把转好的文字复制到剪贴板,直接粘贴到任何地方</li>
+        <li><strong>长按停止按钮</strong> 可以选"停止不复制",方便先编辑再粘贴</li>
+        <li>结果框可以直接编辑,改完再点复制按钮</li>
+        <li>顶部下拉菜单切换"清理 / 轻润色 / 结构化"几种处理风格</li>
+      </ul>
+
+      <details class="alt" id="alt">
+        <summary>另一种方式:命令行部署(不连 GitHub)<span class="tag">进阶</span></summary>
+        <p>
+          如果你不想注册 GitHub、又能接受装一个小工具,可以走这条路。
+          会用到电脑自带的"终端"(Mac 上叫<strong>终端</strong>,
+          Windows 上叫 <strong>PowerShell</strong>),粘贴命令回车即可,
+          不需要写任何代码。
+        </p>
+
+        <h3>准备:装 Node.js</h3>
+        <p>
+          到 <a href="https://nodejs.org" target="_blank" rel="noreferrer">nodejs.org</a>
+          下载安装(选 <strong>LTS</strong> 那个绿色按钮)。装好后打开终端,
+          输入 <code>node -v</code> 能看到版本号就 OK。
+        </p>
+
+        <h3>1. 下载项目代码</h3>
+        <p>从作者提供的压缩包链接下载并解压,然后在终端里进入这个文件夹。</p>
+        <p class="note">不会"进入文件夹"的话:Mac 把解压后的文件夹拖到终端窗口,Windows 在文件夹空白处右键选"在终端中打开"。</p>
+
+        <h3>2. 安装依赖</h3>
+<pre><code>npm install</code></pre>
+        <p class="note">大概几十秒,看到滚动文字停下来就好。</p>
+
+        <h3>3. 登录 Cloudflare</h3>
+<pre><code>npx wrangler login</code></pre>
+        <p>会自动弹浏览器到 Cloudflare 授权页,点"允许"。</p>
+
+        <h3>4. ⚠️ 设密码(<strong>必做</strong>,理由同上面第 3 步)</h3>
+<pre><code>npx wrangler secret put BASIC_AUTH_PASSWORD</code></pre>
+        <p>会让你输密码 —— 屏幕上不显示是正常的,输完回车即可。</p>
+
+        <h3>5. 部署</h3>
+<pre><code>npm run deploy</code></pre>
+        <p>十几秒后,终端会打印出你的网址,打开即可。</p>
+      </details>
+
+      <h2>几个小提醒</h2>
+      <ul>
+        <li>单次录音建议不要超过 <strong>30 秒</strong>,这是模型的上限。</li>
+        <li>免费额度日常自用完全够,如果用得很多,去 Cloudflare 后台看一眼额度。</li>
+        <li>画中画浮窗需要 <strong>Chrome 或 Edge 浏览器</strong>(116 以上),Safari 上会自动变成普通页面也能用。</li>
+        <li>密码不要发给别人;真要分享,让对方也走一遍这个流程,部署他自己的那一份。</li>
+        <li>想改密码:回到第 3 步的位置,点那条 secret 后面的菜单 → Edit → 改新值 → Deploy。</li>
+      </ul>
+
+      <footer>不用装任何东西,纯靠点按钮就把一个真应用跑了起来 ✨</footer>
+    </article>
+  </body>
+</html>
