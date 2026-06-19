@@ -1,4 +1,4 @@
-# cf-whisper-demo
+# voxsmith
 
 A minimal speech-to-text demo running entirely on Cloudflare's edge:
 
@@ -26,7 +26,7 @@ pnpm dev            # wrangler dev → http://localhost:8787
 ## Deploy
 
 ```bash
-pnpm deploy         # wrangler deploy → https://cf-whisper-demo.<account>.workers.dev
+pnpm deploy         # wrangler deploy → https://voxsmith.<account>.workers.dev
 ```
 
 ## Notes

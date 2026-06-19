@@ -1,10 +1,12 @@
-name = "cf-whisper-demo"
+name = "voxsmith"
 main = "src/index.ts"
 compatibility_date = "2025-01-15"
 
-routes = [
-  { pattern = "q.mcaption.com", custom_domain = true }
-]
+# To bind a custom domain you own, uncomment and edit the pattern below.
+# Default deploys (without this block) get a free <name>.<account>.workers.dev URL.
+# routes = [
+#   { pattern = "your.domain.com", custom_domain = true }
+# ]
 
 [ai]
 binding = "AI"

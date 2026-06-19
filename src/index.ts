@@ -250,7 +250,7 @@ function checkBasicAuth(request: Request, env: Env): Response | null {
   return new Response("Authentication required", {
     status: 401,
     headers: {
-      "WWW-Authenticate": 'Basic realm="cf-whisper-demo"',
+      "WWW-Authenticate": 'Basic realm="voxsmith"',
       "Cache-Control": "no-store",
     },
   });
