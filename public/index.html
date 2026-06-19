@@ -517,6 +517,13 @@
         text-transform: uppercase;
         color: var(--faint);
       }
+      .api-label-hint {
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: none;
+        opacity: 0.7;
+        margin-left: 4px;
+      }
       .api-input {
         background: rgba(0, 0, 0, 0.32);
         color: var(--fg);
@@ -616,8 +623,11 @@
             填入你自己的 <b>Account ID</b> 和 <b>API Token</b>,
             前端会绕过 Worker、直接调 <code>api.cloudflare.com</code>,使用<strong>你自己的额度</strong>跑 Whisper。
             凭据只存在本浏览器,不会上传到服务器。<br /><br />
-            ⚠️ 创建 Token 时<strong>只勾 Workers AI Read 权限</strong>,
-            不要给 Edit / Account 级别。直连模式下 refine(清理 / 结构化)不可用,只输出原始转写。
+            ⚠️ Cloudflare Token <strong>只勾 Workers AI Read 权限</strong>,
+            不要给 Edit / Account 级别。<br /><br />
+            想在直连模式下也用 refine(清理 / 润色 / 结构化)?
+            额外填一个 <b>Cerebras API Key</b>,前端会直接调
+            <code>api.cerebras.ai</code> 跑 <code>gpt-oss-120b</code> 做后处理,同样不经过本服务器。留空就只输出原始转写。
           </p>
           <label class="api-field">
             <span class="api-label">Account ID</span>
@@ -625,9 +635,14 @@
               placeholder="32 位字符,在 Cloudflare 控制台右侧栏" spellcheck="false" autocomplete="off" />
           </label>
           <label class="api-field">
-            <span class="api-label">API Token</span>
+            <span class="api-label">Cloudflare API Token</span>
             <input type="password" id="apiTokenInput" class="api-input"
               placeholder="My Profile → API Tokens → Create Token" spellcheck="false" autocomplete="off" />
+          </label>
+          <label class="api-field">
+            <span class="api-label">Cerebras API Key <span class="api-label-hint">(可选 · 用于 refine)</span></span>
+            <input type="password" id="apiCerebrasInput" class="api-input"
+              placeholder="cerebras.ai → API Keys (留空则跳过 refine)" spellcheck="false" autocomplete="off" />
           </label>
           <div class="modal-foot">
             <button type="button" id="apiClear" class="ghost">清除</button>
@@ -693,7 +708,13 @@
       </div>
     </template>
 
-    <script>
+    <script type="module">
+      import {
+        buildSystemPrompt,
+        MODE_LABELS,
+        parseMode,
+      } from "./refine-prompts.js";
+
       const popBtn = document.getElementById("popBtn");
       const hintEl = document.getElementById("hint");
       const tpl = document.getElementById("pipTemplate");
@@ -710,6 +731,8 @@
       let autoCopyPending = false;
       let byoOnly = false;
       let openByoModal = null;
+      let lastRawText = "";
+      let lastRefinedText = "";
       const LONG_PRESS_MS = 350;
 
       const $ = (id) => (activeDoc || document).getElementById(id);
@@ -741,12 +764,68 @@
         return null;
       }
 
+      function getCerebrasKey() {
+        try {
+          const key = (localStorage.getItem("cerebrasApiKey") || "").trim();
+          return key || null;
+        } catch {}
+        return null;
+      }
+
       function updateApiBadge() {
         const badge = document.getElementById("apiStatusBadge");
         if (!badge) return;
         const creds = getDirectCreds();
-        badge.textContent = creds ? "已启用" : "未启用";
-        badge.classList.toggle("active", !!creds);
+        const cerebras = getCerebrasKey();
+        let label = "未启用";
+        if (creds && cerebras) label = "已启用 · refine";
+        else if (creds) label = "已启用";
+        else if (cerebras) label = "仅 refine";
+        badge.textContent = label;
+        badge.classList.toggle("active", !!(creds || cerebras));
+      }
+
+      const CEREBRAS_ENDPOINT = "https://api.cerebras.ai/v1/chat/completions";
+      const CEREBRAS_MODEL = "gpt-oss-120b";
+
+      async function refineWithCerebras(rawText, mode, vocabItems, cerebrasKey) {
+        const trimmed = (rawText || "").trim();
+        if (!trimmed || mode === "raw") return null;
+        const built = buildSystemPrompt(mode, trimmed, vocabItems || []);
+        const messages = [{ role: "system", content: built.system }];
+        if (built.examples) {
+          for (const ex of built.examples) {
+            messages.push({ role: "user", content: ex.user });
+            messages.push({ role: "assistant", content: ex.assistant });
+          }
+        }
+        messages.push({ role: "user", content: trimmed });
+        const res = await fetch(CEREBRAS_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + cerebrasKey,
+          },
+          body: JSON.stringify({
+            model: CEREBRAS_MODEL,
+            messages,
+            temperature: 0.3,
+          }),
+        });
+        if (!res.ok) {
+          let detail = "HTTP " + res.status;
+          try {
+            const body = await res.json();
+            if (body && body.error && body.error.message) detail = body.error.message;
+          } catch {}
+          throw new Error("Cerebras refine failed: " + detail);
+        }
+        const data = await res.json();
+        const content =
+          data && data.choices && data.choices[0] && data.choices[0].message
+            ? data.choices[0].message.content
+            : null;
+        return typeof content === "string" && content.trim() ? content.trim() : null;
       }
 
       async function uploadDirect(blob, creds, vocabItems) {
@@ -978,6 +1057,8 @@
       async function upload(blob) {
         const vocabItems = loadVocabItems();
         const creds = getDirectCreds();
+        lastRawText = "";
+        lastRefinedText = "";
         if (byoOnly && !creds) {
           setStatus(
             "这是公开版,需要先配置直连 API · 用自己的额度",
@@ -990,12 +1071,37 @@
         if (creds) {
           try {
             setStatus("转写中… (直连 Cloudflare)");
-            const text = await uploadDirect(blob, creds, vocabItems);
-            setResult(text || "(模型返回空)");
+            const raw = await uploadDirect(blob, creds, vocabItems);
+            const cerebrasKey = getCerebrasKey();
+            const modeSel = $("modeSel");
+            const mode = parseMode((modeSel && modeSel.value) || "clean");
+            let finalText = raw;
+            let refineLabel = null;
+            if (cerebrasKey && mode !== "raw" && raw && raw.trim()) {
+              try {
+                setStatus("refine 中… (Cerebras · " + (MODE_LABELS[mode] || mode) + ")");
+                const refined = await refineWithCerebras(raw, mode, vocabItems, cerebrasKey);
+                if (refined) {
+                  finalText = refined;
+                  refineLabel = MODE_LABELS[mode] || mode;
+                  lastRawText = raw;
+                  lastRefinedText = refined;
+                }
+              } catch (err) {
+                console.error(err);
+                setStatus("refine 失败,使用原始转写:" + (err.message || err), "error");
+              }
+            } else {
+              lastRawText = raw;
+            }
+            setResult(finalText || "(模型返回空)");
             const vocabHint = vocabItems.length ? " · 词典 " + vocabItems.length : "";
-            setStatus("完成 · 直连 ✓" + vocabHint, "ok");
-            if (autoCopyPending && text) {
-              await copyToClipboard(text);
+            const headline = refineLabel
+              ? "完成 · 直连 ✓ · " + refineLabel + " (Cerebras)"
+              : "完成 · 直连 ✓";
+            setStatus(headline + vocabHint, "ok");
+            if (autoCopyPending && finalText) {
+              await copyToClipboard(finalText);
             }
           } catch (err) {
             setStatus("直连失败:" + (err.message || err), "error");
@@ -1022,6 +1128,8 @@
             setStatus("失败:" + (data.error || res.statusText), "error");
           } else {
             const text = data.text || data.transcription_text || "";
+            lastRawText = (data.raw || text || "").trim();
+            lastRefinedText = data.refined ? text : "";
             setResult(text || "(模型返回空)");
             const baseLabel = data.label ? "完成 · " + data.label + " ✓" : "完成 ✓";
             const vocabHint = vocabItems.length ? " · 词典 " + vocabItems.length : "";
@@ -1186,12 +1294,14 @@
         const clear = document.getElementById("apiClear");
         const accInput = document.getElementById("apiAccountInput");
         const tokInput = document.getElementById("apiTokenInput");
+        const cerebrasInput = document.getElementById("apiCerebrasInput");
         if (!btn || !modal) return;
 
         const open = () => {
           try {
             accInput.value = localStorage.getItem("cfAccountId") || "";
             tokInput.value = localStorage.getItem("cfApiToken") || "";
+            if (cerebrasInput) cerebrasInput.value = localStorage.getItem("cerebrasApiKey") || "";
           } catch {}
           modal.hidden = false;
           setTimeout(() => accInput && accInput.focus(), 0);
@@ -1206,10 +1316,13 @@
           try {
             const acc = accInput.value.trim();
             const tok = tokInput.value.trim();
+            const cerebras = cerebrasInput ? cerebrasInput.value.trim() : "";
             if (acc) localStorage.setItem("cfAccountId", acc);
             else localStorage.removeItem("cfAccountId");
             if (tok) localStorage.setItem("cfApiToken", tok);
             else localStorage.removeItem("cfApiToken");
+            if (cerebras) localStorage.setItem("cerebrasApiKey", cerebras);
+            else localStorage.removeItem("cerebrasApiKey");
           } catch {}
           updateApiBadge();
           refreshByoBannerVisibility();
@@ -1219,9 +1332,11 @@
           try {
             localStorage.removeItem("cfAccountId");
             localStorage.removeItem("cfApiToken");
+            localStorage.removeItem("cerebrasApiKey");
           } catch {}
           if (accInput) accInput.value = "";
           if (tokInput) tokInput.value = "";
+          if (cerebrasInput) cerebrasInput.value = "";
           updateApiBadge();
           refreshByoBannerVisibility();
         };
