@@ -1212,6 +1212,7 @@
             else localStorage.removeItem("cfApiToken");
           } catch {}
           updateApiBadge();
+          refreshByoBannerVisibility();
           hide();
         };
         if (clear) clear.onclick = () => {
@@ -1222,6 +1223,7 @@
           if (accInput) accInput.value = "";
           if (tokInput) tokInput.value = "";
           updateApiBadge();
+          refreshByoBannerVisibility();
         };
         document.addEventListener("keydown", (e) => {
           if (e.key === "Escape" && !modal.hidden) hide();
@@ -1242,6 +1244,13 @@
         host.insertBefore(banner, host.firstChild);
       }
 
+      function refreshByoBannerVisibility() {
+        const existing = document.getElementById("byoBanner");
+        const shouldShow = byoOnly && !getDirectCreds();
+        if (shouldShow && !existing) injectByoBanner();
+        else if (!shouldShow && existing) existing.remove();
+      }
+
       async function bootstrapConfig() {
         try {
           const res = await fetch("/api/config", { cache: "no-store" });
@@ -1250,7 +1259,7 @@
           byoOnly = !!cfg.byoOnly;
         } catch {}
         if (byoOnly) {
-          injectByoBanner();
+          refreshByoBannerVisibility();
           if (!getDirectCreds() && typeof openByoModal === "function") {
             setTimeout(openByoModal, 250);
           }
