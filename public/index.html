@@ -708,6 +708,8 @@
       let menuActive = false;
       let menuEl = null;
       let autoCopyPending = false;
+      let byoOnly = false;
+      let openByoModal = null;
       const LONG_PRESS_MS = 350;
 
       const $ = (id) => (activeDoc || document).getElementById(id);
@@ -976,6 +978,15 @@
       async function upload(blob) {
         const vocabItems = loadVocabItems();
         const creds = getDirectCreds();
+        if (byoOnly && !creds) {
+          setStatus(
+            "这是公开版,需要先配置直连 API · 用自己的额度",
+            "error",
+          );
+          resetRecordButton();
+          if (typeof openByoModal === "function") openByoModal();
+          return;
+        }
         if (creds) {
           try {
             setStatus("转写中… (直连 Cloudflare)");
@@ -1188,6 +1199,7 @@
         const hide = () => { modal.hidden = true; };
 
         btn.onclick = open;
+        openByoModal = open;
         if (close) close.onclick = hide;
         modal.onclick = (e) => { if (e.target === modal) hide(); };
         if (save) save.onclick = () => {
@@ -1218,9 +1230,37 @@
         updateApiBadge();
       }
 
+      function injectByoBanner() {
+        if (document.getElementById("byoBanner")) return;
+        const host = document.getElementById("mainPanel") || document.body;
+        const banner = document.createElement("div");
+        banner.id = "byoBanner";
+        banner.style.cssText =
+          "margin:12px 0;padding:10px 14px;border:1px solid #f0c987;background:#fff7e6;color:#7a4b00;border-radius:10px;font-size:14px;line-height:1.5";
+        banner.innerHTML =
+          '<strong>公开社区版</strong> · 这个网址不消耗作者的 Workers AI 额度。请先点 <strong>⚙ 直连 API · 用自己的额度</strong> 填入你自己的 Cloudflare 凭据后再使用。';
+        host.insertBefore(banner, host.firstChild);
+      }
+
+      async function bootstrapConfig() {
+        try {
+          const res = await fetch("/api/config", { cache: "no-store" });
+          if (!res.ok) return;
+          const cfg = await res.json();
+          byoOnly = !!cfg.byoOnly;
+        } catch {}
+        if (byoOnly) {
+          injectByoBanner();
+          if (!getDirectCreds() && typeof openByoModal === "function") {
+            setTimeout(openByoModal, 250);
+          }
+        }
+      }
+
       popBtn.addEventListener("click", openPiP);
       wireApiSettings();
       mountPreview();
+      bootstrapConfig();
     </script>
   </body>
 </html>

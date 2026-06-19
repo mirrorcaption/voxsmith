@@ -3,6 +3,12 @@ export interface Env {
   ASSETS: Fetcher;
   OPENAI_API_KEY: string;
   BASIC_AUTH_PASSWORD?: string;
+  PUBLIC_BYO_ONLY?: string;
+}
+
+function isByoOnly(env: Env): boolean {
+  const v = (env.PUBLIC_BYO_ONLY ?? "").toLowerCase().trim();
+  return v === "1" || v === "true";
 }
 
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
@@ -377,9 +383,22 @@ export default {
 
     const url = new URL(request.url);
 
+    if (url.pathname === "/api/config") {
+      return Response.json({ byoOnly: isByoOnly(env) });
+    }
+
     if (url.pathname === "/api/transcribe") {
       if (request.method !== "POST") {
         return new Response("Method Not Allowed", { status: 405 });
+      }
+      if (isByoOnly(env)) {
+        return Response.json(
+          {
+            error:
+              "This deployment is BYO-only. Configure your own Cloudflare Account ID and API Token in the 直连 API panel.",
+          },
+          { status: 403 },
+        );
       }
       try {
         return await handleTranscribe(request, env);

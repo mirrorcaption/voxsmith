@@ -133,6 +133,37 @@ https://voxsmith.你的名字.workers.dev
 
 ---
 
+## 作者用：部署一个 BYO-only 的公开版
+
+如果你想公开分享自己的部署（比如照顾访问不到默认 `*.workers.dev` 的用户），但又不想让访客刷掉自己的 Workers AI 额度，可以用 **BYO-only 模式**：
+
+- `/api/transcribe`（默认端点，吃部署者额度）会被直接返回 403
+- 前端开机会自动获取 `/api/config`，识别出 BYO-only 后强制弹出 "直连 API" 模态框，并在主面板顶部加一条黄色提示条
+- 任何想用的人都必须先填自己的 Account ID + Workers AI Token
+
+### 部署步骤
+
+在你的 **公开版 Worker**（建议用一个独立的 Worker 名，比如 `voxsmith-public`）的 Cloudflare 后台里：
+
+**Cloudflare 后台** › **Workers & Pages** › `<你的公开 Worker>` › **Settings** › **Variables and Secrets**
+
+- 加一条 **Variable**（注意不是 Secret）
+  - 名称：`PUBLIC_BYO_ONLY`
+  - 值：`true`
+- **不要** 设 `BASIC_AUTH_PASSWORD`（公开嘛，加密码就没意义了）
+- 点 **Deploy** 保存
+
+> 你自己的私人部署不要碰这个变量，保持默认就好——两套部署用同一个 repo，差别只在 Cloudflare 后台的环境变量。
+
+### 资源消耗预期
+
+- **Workers AI 配额** ✓ 不消耗：Whisper 调用走访客自己的 token，计费到访客账号
+- **Workers 请求次数 / CPU 时间** ⚠️ 算你头上：
+  - 免费档：10 万请求/天、每请求 10ms CPU
+  - 一旦流量上来（每天 1 万以上访客 × 多次录音），建议升 **Workers Paid（$5/月）**，配额扩到 1000 万请求/月 + 50ms CPU/请求，base64 编码大音频也不会撞上限
+
+---
+
 ## 几个小提醒
 
 - 单次录音建议不要超过 **30 秒**，这是模型的上限
