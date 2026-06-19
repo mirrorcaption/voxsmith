@@ -85,6 +85,54 @@ https://voxsmith.你的名字.workers.dev
 
 ---
 
+## 进阶：直连 API 模式（用自己的额度）
+
+主面板下面有个 **⚙ 直连 API · 用自己的额度** 按钮。填进去一对 **Account ID** + **API Token** 以后，前端会跳过部署者的 Whisper 调用，直接拿你的 token 去 `api.cloudflare.com` 跑，**消耗的是你自己 Cloudflare 账号的额度**。
+
+适合两种情况：
+
+- 别人分享了一个 voxsmith 给你用，但你不想占用 ta 的免费额度
+- 自己部署的同时也希望朋友用，但希望各人各付各的（让朋友填自己的 token 即可）
+
+### 1. 拿 Account ID
+
+登录 [Cloudflare 后台](https://dash.cloudflare.com)，进任意一个 Workers & Pages 项目，**右侧边栏** 就有 "Account ID"，点一下复制（32 位十六进制字符串）。
+
+### 2. 创建 API Token
+
+在浏览器里按下面这条路径点过去：
+
+**Cloudflare 后台** › 右上角头像 › **My Profile** › **API Tokens** › **Create Token** › 找到 **Custom token** 那行点 **Get started**
+
+在创建页面：
+
+- **Token name**：随便填，比如 `voxsmith-whisper`
+- **Permissions**：只加一条 → `Account` · `Workers AI` · `Read`
+- 其它选项保持默认，点 **Continue to summary** → **Create Token**
+- **立刻复制** 显示出来的 token，关掉页面就再也看不到了
+
+> ### ⚠ Token 权限只勾 Workers AI Read
+>
+> 千万别图省事勾上 Edit 或 Account 级别。万一这个 token 泄露，攻击者最多帮你跑光 Whisper 额度，不会动到你账号别的东西。
+
+### 3. 填进 voxsmith
+
+回到部署好的 voxsmith 页面，点 **⚙ 直连 API · 用自己的额度** 按钮：
+
+- **Account ID** 粘第一步的字符串
+- **API Token** 粘第二步生成的 token
+- 点 **保存**
+
+按钮旁边的徽章会从 "未启用" 变成 "已启用"。录一段试一下，状态栏出现 **完成 · 直连 ✓** 就成了。
+
+> 凭据只存在你这台浏览器的 `localStorage`，不会上传到服务器，也不会跨设备同步。换浏览器需要再填一次。想关掉直连模式：进同一个 modal，点 **清除**。
+
+### 限制
+
+直连模式下 **refine 不可用**（清理 / 轻润色 / 结构化都跳过），只输出 Whisper 的原始转写。因为 refine 用的是部署者配置的 OpenAI key，前端绕过了 Worker 就拿不到那一步。
+
+---
+
 ## 几个小提醒
 
 - 单次录音建议不要超过 **30 秒**，这是模型的上限
