@@ -81,7 +81,8 @@ https://voxsmith.你的名字.workers.dev
 - **长按停止按钮** 可以选"停止不复制"，方便先编辑再粘贴
 - 结果框可以直接编辑，改完再点复制按钮
 - 顶部下拉菜单切换 "清理 / 轻润色 / 结构化" 几种处理风格
-- 左侧 **自定义词汇** 面板可以填专有名词或行业术语（保存在浏览器本地），帮助识别器正确拼写它们
+- 左侧 **自定义词汇** 面板可以填专有名词或行业术语（保存在浏览器本地）。这些词会被同时塞给 Whisper（影响识别）和 refine（强制规范拼写）—— 所以哪怕 Whisper 把 `GIT` 听成 `git`，refine 阶段会把它纠回 `GIT`
+- 改完结果后，**学习修改** 按钮会自动找出你新加进去的专有名词（驼峰命名、全大写缩写、含数字的标识符等），勾选后一键加入自定义词汇，下次录音直接生效
 
 ---
 
@@ -120,16 +121,23 @@ https://voxsmith.你的名字.workers.dev
 回到部署好的 voxsmith 页面，点 **⚙ 直连 API · 用自己的额度** 按钮：
 
 - **Account ID** 粘第一步的字符串
-- **API Token** 粘第二步生成的 token
+- **Cloudflare API Token** 粘第二步生成的 token
+- **Cerebras API Key**（可选）粘你的 Cerebras key —— 留空就跳过 refine，填了就在浏览器里直接调 `api.cerebras.ai` 的 `gpt-oss-120b` 做清理 / 润色 / 结构化
 - 点 **保存**
 
-按钮旁边的徽章会从 "未启用" 变成 "已启用"。录一段试一下，状态栏出现 **完成 · 直连 ✓** 就成了。
+按钮旁边的徽章会从 "未启用" 变成 "已启用"（或 "已启用 · refine"，如果你也填了 Cerebras key）。录一段试一下，状态栏出现 **完成 · 直连 ✓** 就成了。
 
-> 凭据只存在你这台浏览器的 `localStorage`，不会上传到服务器，也不会跨设备同步。换浏览器需要再填一次。想关掉直连模式：进同一个 modal，点 **清除**。
+> 所有 key 只存在你这台浏览器的 `localStorage`，不会上传到任何服务器，也不会跨设备同步。换浏览器需要再填一次。想关掉直连模式：进同一个 modal，点 **清除**。
+
+### 4. （可选）开启 Cerebras refine
+
+如果想在直连模式下也用清理 / 润色 / 结构化，去 [cerebras.ai](https://cerebras.ai) 注册一个免费账号 → 后台找到 **API Keys** → 创建一个新 key，粘到上面的 **Cerebras API Key** 输入框里。前端会用同一份 system prompt（包含你的自定义词汇）直接调它的接口，整个 refine 流程不经过 voxsmith 服务器、用的是你自己的 Cerebras 配额。
+
+> 模型固定 `gpt-oss-120b`，便宜且支持中英文。Cerebras 默认 token 配额对个人使用来说够用了。
 
 ### 限制
 
-直连模式下 **refine 不可用**（清理 / 轻润色 / 结构化都跳过），只输出 Whisper 的原始转写。因为 refine 用的是部署者配置的 OpenAI key，前端绕过了 Worker 就拿不到那一步。
+直连模式下没填 Cerebras key 的话，refine 就**跳过**，只输出 Whisper 原始转写。原因是 refine 默认走部署者的 OpenAI，前端绕过 Worker 就拿不到。填一把自己的 Cerebras key 就解锁。
 
 ---
 
@@ -140,6 +148,7 @@ https://voxsmith.你的名字.workers.dev
 - `/api/transcribe`（默认端点，吃部署者额度）会被直接返回 403
 - 前端开机会自动获取 `/api/config`，识别出 BYO-only 后强制弹出 "直连 API" 模态框，并在主面板顶部加一条黄色提示条
 - 任何想用的人都必须先填自己的 Account ID + Workers AI Token
+- refine（清理 / 润色 / 结构化）也走访客自己的 Cerebras key —— 部署者完全不需要配 OpenAI key
 
 ### 部署步骤
 
@@ -235,11 +244,12 @@ npm run deploy
 
 ### 架构一句话
 
-- **Worker** (`src/index.ts`) —— 接收 `POST /api/transcribe`，通过 `AI` binding 调用 `@cf/openai/whisper-large-v3-turbo`，返回 JSON。`?vocab=` query 参数会作为 Whisper 的 `initial_prompt` 用来 bias 识别结果向用户提供的术语靠拢。
-- **静态页** (`public/index.html`) —— 单按钮 MediaRecorder UI，含自定义词汇面板（数据存 `localStorage`）。
+- **Worker** (`src/index.ts`) —— 接收 `POST /api/transcribe`，通过 `AI` binding 调用 `@cf/openai/whisper-large-v3-turbo`，按需通过 OpenAI 做 refine，返回 JSON。`?vocab=` query 参数同时塞给 Whisper 的 `initial_prompt`（影响识别）和 refine 的 system prompt 字典区块（强制规范拼写）。
+- **共享 prompt 模板** (`src/refine/prompts.ts` + `public/refine-prompts.js`) —— 一份用于 Worker，一份镜像给浏览器，两边构造的 system message 完全一致。清理 / 润色 / 结构化各模式自动按检测到的中英文路由。
+- **静态页** (`public/index.html`) —— 单按钮 MediaRecorder UI、自定义词汇面板、API 凭据 modal、"学习修改" 按钮（数据全存 `localStorage`）。在直连模式下浏览器可直接调 `api.cerebras.ai` 用 `gpt-oss-120b` 做 refine。
 - **静态资源** 通过 Workers 的 `[assets]` binding 提供，无需另外托管。
 
-整套都跑在 Cloudflare 边缘：录音字节打到最近的 PoP，Whisper 推理在 Workers AI 上完成，响应直接回来，没有 origin server。
+整套都跑在 Cloudflare 边缘：录音字节打到最近的 PoP，Whisper 推理在 Workers AI 上完成，refine 默认走 OpenAI（直连 + Cerebras 路径则完全绕开本服务器）。
 
 ### 本地开发
 
@@ -264,8 +274,9 @@ pnpm deploy          # wrangler deploy → https://voxsmith.<account>.workers.de
 ### 技术备注
 
 - Whisper 单次最长 ~30 秒音频。要做更长的语音流，需要客户端切片，或换成流式 ASR（AssemblyAI、Deepgram 等）。
-- 自定义词汇用的 `initial_prompt` 是 *软提示*（≈224 tokens），Whisper 会向那些拼写偏移但不保证。要硬保证，可以加一道 LLM 后处理 pass。
+- 自定义词汇用的 `initial_prompt` 是 *软提示*（≈224 tokens），Whisper 会向那些拼写偏移但不保证。这就是为什么同一份词典还会拼到 refine 的 system prompt 里作为"硬纠错"——即使 Whisper 听错了 `GIT` 听成 `git`，refine 也会按词典规范化回去。
 - 页面用浏览器默认编码（一般是 `audio/webm;opus`）的 `MediaRecorder`，Whisper 通过 base64 接受主流格式。
 - Workers AI 用量计入跑 `wrangler deploy` 的那个 Cloudflare 账号。免费额度有每日 neuron 配额，详见 Cloudflare 定价页。
+- 想自己改 prompt 或加新模式：先改 `src/refine/prompts.ts`（Worker 用），再把同样的字符串同步到 `public/refine-prompts.js`（浏览器 Cerebras 路径用）。两文件顶部都有 keep-in-sync 注释。
 
 </details>
