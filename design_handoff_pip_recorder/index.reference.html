@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CF Whisper · 画中画转写</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07070b;
+        --panel: rgba(18, 19, 28, 0.78);
+        --panel-solid: #11121b;
+        --fg: #ECECF3;
+        --muted: #888EA3;
+        --faint: #5A5F73;
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.14);
+        --inset: rgba(0, 0, 0, 0.35);
+        --accent: #6E7BFF;
+        --accent-2: #4DA6FF;
+        --accent-grad: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);
+        --danger: #FF4D6D;
+        --danger-grad: linear-gradient(135deg, #FF5470 0%, #FF7A4D 100%);
+        --ok: #34D399;
+        --r-lg: 22px;
+        --r-md: 14px;
+        --r-sm: 11px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        background:
+          radial-gradient(900px 480px at 20% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
+          radial-gradient(760px 420px at 100% 110%, rgba(77, 141, 255, 0.16), transparent 60%),
+          var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .panel {
+        position: relative;
+        width: 100%;
+        max-width: 372px;
+        background: var(--panel);
+        backdrop-filter: blur(22px) saturate(140%);
+        -webkit-backdrop-filter: blur(22px) saturate(140%);
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        padding: 20px;
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.05) inset,
+          0 24px 60px -20px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(0, 0, 0, 0.4);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      /* faint top sheen */
+      .panel::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 120px;
+        border-radius: var(--r-lg) var(--r-lg) 0 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+        pointer-events: none;
+      }
+
+      /* ---------- Side-by-side stage ---------- */
+      .stage {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 24px;
+        flex-wrap: wrap;
+        width: max-content;
+        max-width: 100%;
+        margin: auto;
+      }
+      .stage > .panel { flex: 0 0 348px; align-self: stretch; max-width: none; }
+
+      /* floating PiP window mock holding the live small-window preview */
+      .pip-frame {
+        flex: 0 0 360px;
+        align-self: stretch;
+        background: var(--panel);
+        backdrop-filter: blur(22px) saturate(140%);
+        -webkit-backdrop-filter: blur(22px) saturate(140%);
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.4);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .pip-bar {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .pip-bar .lights { display: flex; gap: 6px; }
+      .pip-bar .lights i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
+      .pip-bar .lights i:nth-child(1) { background: #FF5F57; }
+      .pip-bar .lights i:nth-child(2) { background: #FEBC2E; }
+      .pip-bar .lights i:nth-child(3) { background: #28C840; }
+      .pip-bar .ttl {
+        font-size: 11px; font-weight: 650; letter-spacing: 0.04em;
+        color: var(--muted); margin-left: 3px;
+      }
+      .pip-bar .live {
+        margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--faint);
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .pip-bar .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+      /* strip the inner panel's own chrome when embedded in the window */
+      .pip-frame .panel {
+        background: transparent; border: 0; box-shadow: none;
+        backdrop-filter: none; -webkit-backdrop-filter: none;
+        border-radius: 0; max-width: none; flex: 1;
+      }
+      .pip-frame .panel::before { display: none; }
+      .pip-note { padding: 44px 22px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .kicker .bead {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--accent-grad);
+        box-shadow: 0 0 12px rgba(110, 123, 255, 0.9);
+      }
+      h1 {
+        margin: 0;
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+      p.sub { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+      .row { display: flex; gap: 10px; }
+
+      /* ---------- Buttons ---------- */
+      button {
+        appearance: none;
+        border: 0;
+        padding: 13px 16px;
+        border-radius: var(--r-md);
+        font-size: 14px;
+        font-weight: 650;
+        font-family: inherit;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        transition: transform 0.08s ease, box-shadow 0.2s ease, background 0.25s ease, opacity 0.15s;
+      }
+      button:disabled { opacity: 0.42; cursor: not-allowed; }
+      button:active:not(:disabled) { transform: scale(0.975); }
+
+      .primary {
+        background: var(--accent-grad);
+        flex: 1;
+        box-shadow: 0 10px 26px -10px rgba(110, 123, 255, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+      }
+      .primary:hover:not(:disabled) { box-shadow: 0 14px 34px -10px rgba(110, 123, 255, 1), 0 0 0 1px rgba(255, 255, 255, 0.12) inset; }
+      /* idle record dot */
+      .primary::before {
+        content: "";
+        width: 10px; height: 10px; border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+      }
+
+      .danger {
+        background: var(--danger-grad);
+        flex: 1;
+        box-shadow: 0 10px 26px -10px rgba(255, 77, 109, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        animation: recPulse 1.6s ease-in-out infinite;
+      }
+      /* recording stop square */
+      .danger::before {
+        content: "";
+        width: 11px; height: 11px; border-radius: 3px;
+        background: #fff;
+      }
+
+      .ghost {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line-strong);
+        color: var(--fg);
+        flex: 0 0 auto;
+        min-width: 52px;
+        padding: 13px;
+      }
+      .ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.11); }
+
+      .hero {
+        width: 100%;
+        padding: 15px 18px;
+        font-size: 15px;
+        background: var(--accent-grad);
+        box-shadow: 0 14px 34px -12px rgba(110, 123, 255, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+      }
+      .hero::before {
+        content: "";
+        width: 13px; height: 13px;
+        border: 2px solid #fff;
+        border-radius: 4px;
+        box-shadow: 4px -4px 0 -1px var(--accent);
+        margin-top: -3px; margin-right: 1px;
+      }
+      .hero:hover:not(:disabled) { box-shadow: 0 18px 40px -12px rgba(110, 123, 255, 1), 0 0 0 1px rgba(255, 255, 255, 0.12) inset; }
+
+      /* ---------- Select ---------- */
+      .field-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin-bottom: -6px;
+      }
+      select {
+        appearance: none;
+        background: rgba(0, 0, 0, 0.28);
+        color: var(--fg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        padding: 12px 36px 12px 14px;
+        font-size: 13px;
+        font-weight: 550;
+        font-family: inherit;
+        width: 100%;
+        cursor: pointer;
+        transition: border-color 0.18s, box-shadow 0.18s;
+        background-image:
+          linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+          linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+        background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
+      }
+      select:hover { border-color: var(--line-strong); }
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.22);
+      }
+      select option { background: var(--panel-solid); color: var(--fg); }
+
+      /* ---------- Toggle switch ---------- */
+      .opt-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--muted);
+        user-select: none;
+        cursor: pointer;
+      }
+      .opt-row input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: 0 0 auto;
+        width: 36px; height: 21px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--line-strong);
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s;
+      }
+      .opt-row input[type="checkbox"]::before {
+        content: "";
+        position: absolute;
+        top: 2px; left: 2px;
+        width: 15px; height: 15px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .opt-row input[type="checkbox"]:checked {
+        background: var(--accent-grad);
+        border-color: transparent;
+      }
+      .opt-row input[type="checkbox"]:checked::before { transform: translateX(15px); }
+
+      /* ---------- Recording waveform ---------- */
+      .wave {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: height 0.28s ease, opacity 0.28s ease;
+      }
+      .wave i {
+        width: 3px;
+        height: 100%;
+        border-radius: 3px;
+        background: var(--danger-grad);
+        transform-origin: center;
+        animation: eq 0.9s ease-in-out infinite;
+      }
+      .wave i:nth-child(1) { animation-delay: -0.8s; }
+      .wave i:nth-child(2) { animation-delay: -0.5s; }
+      .wave i:nth-child(3) { animation-delay: -0.2s; }
+      .wave i:nth-child(4) { animation-delay: -0.65s; }
+      .wave i:nth-child(5) { animation-delay: -0.35s; }
+      .wave i:nth-child(6) { animation-delay: -0.1s; }
+      .wave i:nth-child(7) { animation-delay: -0.55s; }
+      .wave i:nth-child(8) { animation-delay: -0.25s; }
+      .wave i:nth-child(9) { animation-delay: -0.7s; }
+      .panel:has(#recordBtn.danger) .wave { height: 26px; opacity: 1; }
+
+      /* ---------- Status ---------- */
+      .status {
+        font-size: 11.5px;
+        font-weight: 550;
+        color: var(--muted);
+        min-height: 16px;
+        display: flex;
+        align-items: center;
+        letter-spacing: 0.01em;
+      }
+      .status.error { color: var(--danger); }
+      .status.ok { color: var(--ok); }
+      .dot {
+        display: inline-block;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: var(--danger);
+        margin-right: 7px;
+        box-shadow: 0 0 8px rgba(255, 77, 109, 0.9);
+        animation: pulse 1s infinite;
+      }
+
+      /* ---------- Result ---------- */
+      .result {
+        background: rgba(0, 0, 0, 0.32);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        padding: 13px 14px;
+        font-size: 13.5px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        min-height: 70px;
+        max-height: 220px;
+        overflow-y: auto;
+        outline: none;
+        transition: border-color 0.18s, box-shadow 0.18s;
+      }
+      .result:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.18);
+      }
+      .result:empty::before { content: "转写结果会出现在这里 · 可直接编辑"; color: var(--faint); }
+      .result::-webkit-scrollbar { width: 8px; }
+      .result::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+
+      /* ---------- Long-press stop menu ---------- */
+      .stop-menu {
+        position: fixed;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 100;
+        pointer-events: none;
+        animation: menuIn 0.14s ease-out;
+      }
+      .stop-opt {
+        background: rgba(24, 25, 36, 0.92);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        color: var(--fg);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-md);
+        padding: 12px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: center;
+        pointer-events: auto;
+        transition: background 0.12s, transform 0.1s, border-color 0.12s, box-shadow 0.12s;
+        box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.6);
+      }
+      .stop-opt.hot {
+        background: var(--accent-grad);
+        border-color: transparent;
+        color: #fff;
+        transform: scale(1.04);
+        box-shadow: 0 14px 32px -8px rgba(110, 123, 255, 0.9);
+      }
+
+      @keyframes pulse { 0%, 100% { opacity: 0.4 } 50% { opacity: 1 } }
+      @keyframes recPulse {
+        0%, 100% { box-shadow: 0 10px 26px -10px rgba(255, 77, 109, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) inset; }
+        50% { box-shadow: 0 10px 30px -8px rgba(255, 77, 109, 1), 0 0 0 4px rgba(255, 77, 109, 0.18) inset; }
+      }
+      @keyframes eq {
+        0%, 100% { transform: scaleY(0.28); }
+        50% { transform: scaleY(1); }
+      }
+      @keyframes menuIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="panel" id="mainPanel">
+        <span class="kicker"><span class="bead"></span>实时语音转写</span>
+        <h1>边缘语音转写</h1>
+        <p class="sub">
+          把工具弹成系统级"画中画"小窗 —— 始终浮在最上层，切到任何应用都能录音转写，转完直接复制。
+        </p>
+        <button id="popBtn" class="hero">弹出录音小窗</button>
+        <p class="sub" id="hint">右侧是小窗的实时预览，可直接录音试用。</p>
+      </div>
+
+      <div class="pip-frame" id="pipFrame">
+        <div class="pip-bar">
+          <span class="lights"><i></i><i></i><i></i></span>
+          <span class="ttl">录音小窗 · 预览</span>
+          <span class="live">Live</span>
+        </div>
+        <div id="pipSlot"></div>
+      </div>
+    </div>
+
+    <template id="pipTemplate">
+      <div class="panel">
+        <span class="field-label">Refine 模式</span>
+        <select id="modeSel" title="录音前选择一种 refine 模式">
+          <option value="clean">清理 · 去口头语 / 修标点</option>
+          <option value="polish">轻结构化 · 邮件 / 聊天</option>
+          <option value="structure-en">结构化 Prompt · 英文输出</option>
+          <option value="structure-zh">结构化 Prompt · 中文输出</option>
+          <option value="raw">原始 · 不处理</option>
+        </select>
+        <div class="row">
+          <button id="recordBtn" class="primary">开始说话</button>
+          <button id="copyBtn" class="ghost" disabled title="复制结果">复制</button>
+        </div>
+        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <label class="opt-row" for="autoCopyChk">
+          <input type="checkbox" id="autoCopyChk" />
+          <span>结束后自动复制（长按"停止"可临时切换）</span>
+        </label>
+        <div id="status" class="status">就绪</div>
+        <div id="result" class="result" contenteditable="true" spellcheck="false"></div>
+      </div>
+    </template>
+
+    <script>
+      const popBtn = document.getElementById("popBtn");
+      const mainPanel = document.getElementById("mainPanel");
+      const hintEl = document.getElementById("hint");
+      const tpl = document.getElementById("pipTemplate");
+
+      let pipWindow = null;
+      let activeDoc = null;
+      let mediaRecorder = null;
+      let stream = null;
+      let chunks = [];
+      let longPressTimer = null;
+      let menuActive = false;
+      let menuEl = null;
+      let autoCopyPending = false;
+      const LONG_PRESS_MS = 350;
+
+      const $ = (id) => (activeDoc || document).getElementById(id);
+
+      function setStatus(html, kind) {
+        const el = $("status");
+        if (!el) return;
+        el.innerHTML = html;
+        el.className = "status" + (kind ? " " + kind : "");
+      }
+
+      function setResult(text) {
+        const r = $("result");
+        if (!r) return;
+        r.textContent = text || "";
+        const c = $("copyBtn");
+        if (c) c.disabled = !text;
+      }
+
+      function pickMimeType() {
+        const candidates = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/ogg;codecs=opus",
+        ];
+        for (const t of candidates) {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return "";
+      }
+
+      async function startRecording() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+          setStatus("无法访问麦克风:" + (err.message || err), "error");
+          return;
+        }
+        const mimeType = pickMimeType();
+        chunks = [];
+        try {
+          mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        } catch (err) {
+          setStatus("MediaRecorder 创建失败:" + (err.message || err), "error");
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size) chunks.push(e.data);
+        };
+        mediaRecorder.onstop = async () => {
+          if (stream) {
+            stream.getTracks().forEach((t) => t.stop());
+            stream = null;
+          }
+          const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          chunks = [];
+          await upload(blob);
+        };
+        mediaRecorder.start();
+        const btn = $("recordBtn");
+        btn.classList.remove("primary");
+        btn.classList.add("danger");
+        btn.textContent = "停止";
+        setStatus('<span class="dot"></span>正在录音… <span style="opacity:.7">(长按可切换是否复制)</span>');
+      }
+
+      function stopRecording(mode) {
+        if (!mediaRecorder) return;
+        if (mode === "copy") autoCopyPending = true;
+        else if (mode === "review") autoCopyPending = false;
+        else {
+          const chk = $("autoCopyChk");
+          autoCopyPending = chk ? chk.checked : true;
+        }
+        const btn = $("recordBtn");
+        if (btn) btn.disabled = true;
+        setStatus(autoCopyPending ? "转写中… (将自动复制)" : "转写中…");
+        try { mediaRecorder.stop(); } catch {}
+      }
+
+      async function copyToClipboard(text) {
+        if (!text) return false;
+        const win = (activeDoc && activeDoc.defaultView) || window;
+        try {
+          await win.navigator.clipboard.writeText(text);
+          setStatus("已复制到剪贴板 ✓", "ok");
+          return true;
+        } catch (err) {
+          try {
+            const ta = activeDoc.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            ta.setAttribute("readonly", "");
+            activeDoc.body.appendChild(ta);
+            ta.select();
+            const ok = activeDoc.execCommand("copy");
+            ta.remove();
+            if (ok) {
+              setStatus("已复制 ✓", "ok");
+              return true;
+            }
+          } catch {}
+          setStatus("复制失败,请手动点复制", "error");
+          return false;
+        }
+      }
+
+      function showOptionsMenu() {
+        menuActive = true;
+        const doc = activeDoc || document;
+        const btn = doc.getElementById("recordBtn");
+        if (!btn) return;
+        const rect = btn.getBoundingClientRect();
+        const win = doc.defaultView || window;
+        const width = Math.max(rect.width, 180);
+        const left = Math.max(8, rect.left + rect.width / 2 - width / 2);
+
+        menuEl = doc.createElement("div");
+        menuEl.className = "stop-menu";
+        menuEl.innerHTML =
+          '<div class="stop-opt" data-mode="copy">停止并复制</div>' +
+          '<div class="stop-opt" data-mode="review">停止不复制</div>';
+        menuEl.style.left = left + "px";
+        menuEl.style.width = width + "px";
+        menuEl.style.bottom = (win.innerHeight - rect.top + 8) + "px";
+        doc.body.appendChild(menuEl);
+      }
+
+      function hideOptionsMenu() {
+        menuActive = false;
+        if (menuEl) {
+          menuEl.remove();
+          menuEl = null;
+        }
+      }
+
+      function pickChoice(x, y) {
+        const doc = activeDoc || document;
+        const el = doc.elementFromPoint(x, y);
+        if (!el) return null;
+        const opt = el.closest && el.closest(".stop-opt");
+        return opt ? opt.getAttribute("data-mode") : null;
+      }
+
+      function updateHighlight(x, y) {
+        if (!menuEl) return;
+        const choice = pickChoice(x, y);
+        menuEl.querySelectorAll(".stop-opt").forEach((el) => {
+          el.classList.toggle("hot", el.getAttribute("data-mode") === choice);
+        });
+      }
+
+      function onRecordPointerDown(e) {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (e.pointerType === "touch") {
+          try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+        }
+        e.preventDefault();
+        const doc = activeDoc || document;
+        const isRecording = mediaRecorder && mediaRecorder.state === "recording";
+
+        if (!isRecording) {
+          const onUp = () => {
+            doc.removeEventListener("pointerup", onUp);
+            doc.removeEventListener("pointercancel", onUp);
+            setResult("");
+            startRecording();
+          };
+          doc.addEventListener("pointerup", onUp, { once: true });
+          doc.addEventListener("pointercancel", onUp, { once: true });
+          return;
+        }
+
+        longPressTimer = setTimeout(() => {
+          longPressTimer = null;
+          showOptionsMenu();
+        }, LONG_PRESS_MS);
+
+        const onMove = (ev) => {
+          if (menuActive) updateHighlight(ev.clientX, ev.clientY);
+        };
+        const onUp = (ev) => {
+          doc.removeEventListener("pointermove", onMove);
+          doc.removeEventListener("pointerup", onUp);
+          doc.removeEventListener("pointercancel", onUp);
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+            stopRecording();
+            return;
+          }
+          if (menuActive) {
+            const choice = pickChoice(ev.clientX, ev.clientY);
+            hideOptionsMenu();
+            if (choice) stopRecording(choice);
+          }
+        };
+        doc.addEventListener("pointermove", onMove);
+        doc.addEventListener("pointerup", onUp);
+        doc.addEventListener("pointercancel", onUp);
+      }
+
+      async function upload(blob) {
+        try {
+          const modeSel = $("modeSel");
+          const mode = (modeSel && modeSel.value) || "clean";
+          const res = await fetch("/api/transcribe?mode=" + encodeURIComponent(mode), {
+            method: "POST",
+            headers: { "Content-Type": blob.type || "audio/webm" },
+            body: blob,
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setStatus("失败:" + (data.error || res.statusText), "error");
+          } else {
+            const text = data.text || data.transcription_text || "";
+            setResult(text || "(模型返回空)");
+            const baseLabel = data.label ? "完成 · " + data.label + " ✓" : "完成 ✓";
+            setStatus(baseLabel, "ok");
+            if (autoCopyPending && text) {
+              await copyToClipboard(text);
+            }
+          }
+        } catch (err) {
+          setStatus("请求失败:" + (err.message || err), "error");
+        } finally {
+          autoCopyPending = false;
+          resetRecordButton();
+        }
+      }
+
+      function resetRecordButton() {
+        const btn = $("recordBtn");
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "开始说话";
+          btn.classList.add("primary");
+          btn.classList.remove("danger");
+        }
+        mediaRecorder = null;
+      }
+
+      function wireControls() {
+        const sel = $("modeSel");
+        if (sel) sel.value = localStorage.getItem("refineMode") || "clean";
+        const recBtn = $("recordBtn");
+        recBtn.onclick = null;
+        recBtn.onpointerdown = onRecordPointerDown;
+        const selEl = $("modeSel");
+        if (selEl) selEl.onchange = () => {
+          try { localStorage.setItem("refineMode", selEl.value); } catch {}
+        };
+        const chk = $("autoCopyChk");
+        if (chk) {
+          const saved = localStorage.getItem("autoCopy");
+          chk.checked = saved === null ? true : saved === "1";
+          chk.onchange = () => {
+            try { localStorage.setItem("autoCopy", chk.checked ? "1" : "0"); } catch {}
+          };
+        }
+        const resultEl = $("result");
+        if (resultEl) {
+          resultEl.oninput = () => {
+            const c = $("copyBtn");
+            if (c) c.disabled = !resultEl.textContent.trim();
+          };
+        }
+        $("copyBtn").onclick = async () => {
+          const text = $("result").textContent;
+          await copyToClipboard(text);
+        };
+      }
+
+      function copyStyles(targetDoc) {
+        document.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
+          targetDoc.head.appendChild(node.cloneNode(true));
+        });
+      }
+
+      const pipSlot = document.getElementById("pipSlot");
+
+      function mountPreview() {
+        pipSlot.innerHTML = "";
+        pipSlot.appendChild(tpl.content.cloneNode(true));
+        activeDoc = document;
+        wireControls();
+      }
+
+      async function openPiP() {
+        if (!("documentPictureInPicture" in window)) {
+          hintEl.textContent = "当前环境不支持独立画中画(需 Chrome / Edge 116+)。右侧预览功能一致，可直接录音使用。";
+          return;
+        }
+        try {
+          pipWindow = await documentPictureInPicture.requestWindow({
+            width: 372,
+            height: 340,
+          });
+        } catch (err) {
+          hintEl.textContent = "无法弹出独立小窗(预览环境只允许顶层页面弹窗)。右侧为内嵌小窗，功能完全一致，可直接使用。";
+          return;
+        }
+        // hand control to the real PiP window; pause the inline preview
+        pipSlot.innerHTML = '<div class="pip-note">已在画中画小窗中打开 ✨<br>关闭那个小窗即可在此恢复预览。</div>';
+        copyStyles(pipWindow.document);
+        pipWindow.document.body.style.padding = "16px";
+        pipWindow.document.body.appendChild(tpl.content.cloneNode(true));
+        activeDoc = pipWindow.document;
+        wireControls();
+
+        popBtn.disabled = true;
+        popBtn.textContent = "已弹出(可拖到任意角)";
+
+        pipWindow.addEventListener("pagehide", () => {
+          if (mediaRecorder && mediaRecorder.state === "recording") {
+            try { mediaRecorder.stop(); } catch {}
+          }
+          pipWindow = null;
+          popBtn.disabled = false;
+          popBtn.textContent = "弹出录音小窗";
+          mountPreview();
+        });
+      }
+
+      popBtn.addEventListener("click", openPiP);
+      // mount the live inline preview beside the launcher on load
+      mountPreview();
+    </script>
+  </body>
+</html>
