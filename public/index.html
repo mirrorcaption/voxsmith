@@ -503,6 +503,42 @@
         font-size: 13px;
         border-radius: var(--r-md);
       }
+      .api-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin: 10px 16px 0;
+      }
+      .api-field:last-of-type { margin-bottom: 6px; }
+      .api-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .api-input {
+        background: rgba(0, 0, 0, 0.32);
+        color: var(--fg);
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        padding: 10px 13px;
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.18s, box-shadow 0.18s;
+      }
+      .api-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.18);
+      }
+      .api-input::placeholder { color: var(--faint); }
+      .modal-foot .ghost {
+        padding: 9px 14px;
+        font-size: 13px;
+        min-width: auto;
+      }
+
       @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
       @keyframes modalRise {
         from { opacity: 0; transform: translateY(10px) scale(0.97); }
@@ -563,6 +599,41 @@
         </p>
         <button id="popBtn" class="hero">弹出录音小窗</button>
         <p class="sub" id="hint">右侧是小窗的实时预览,可直接录音试用。</p>
+        <button type="button" id="apiSettingsBtn" class="vocab-btn">
+          <span class="vocab-btn-icon">⚙</span>
+          <span class="vocab-btn-label">直连 API · 用自己的额度</span>
+          <span class="vocab-count" id="apiStatusBadge">未启用</span>
+        </button>
+      </div>
+
+      <div class="modal-backdrop" id="apiModal" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
+          <div class="modal-head">
+            <h3 class="modal-title" id="apiModalTitle">直连 Cloudflare API</h3>
+            <button type="button" class="modal-close" id="apiClose" aria-label="关闭">×</button>
+          </div>
+          <p class="modal-hint">
+            填入你自己的 <b>Account ID</b> 和 <b>API Token</b>,
+            前端会绕过 Worker、直接调 <code>api.cloudflare.com</code>,使用<strong>你自己的额度</strong>跑 Whisper。
+            凭据只存在本浏览器,不会上传到服务器。<br /><br />
+            ⚠️ 创建 Token 时<strong>只勾 Workers AI Read 权限</strong>,
+            不要给 Edit / Account 级别。直连模式下 refine(清理 / 结构化)不可用,只输出原始转写。
+          </p>
+          <label class="api-field">
+            <span class="api-label">Account ID</span>
+            <input type="text" id="apiAccountInput" class="api-input"
+              placeholder="32 位字符,在 Cloudflare 控制台右侧栏" spellcheck="false" autocomplete="off" />
+          </label>
+          <label class="api-field">
+            <span class="api-label">API Token</span>
+            <input type="password" id="apiTokenInput" class="api-input"
+              placeholder="My Profile → API Tokens → Create Token" spellcheck="false" autocomplete="off" />
+          </label>
+          <div class="modal-foot">
+            <button type="button" id="apiClear" class="ghost">清除</button>
+            <button type="button" id="apiSave" class="modal-done">保存</button>
+          </div>
+        </div>
       </div>
 
       <div class="pip-frame" id="pipFrame">
@@ -657,6 +728,66 @@
       }
       function buildVocabPrompt(items) {
         return items.join(", ");
+      }
+
+      function getDirectCreds() {
+        try {
+          const accountId = (localStorage.getItem("cfAccountId") || "").trim();
+          const token = (localStorage.getItem("cfApiToken") || "").trim();
+          if (accountId && token) return { accountId, token };
+        } catch {}
+        return null;
+      }
+
+      function updateApiBadge() {
+        const badge = document.getElementById("apiStatusBadge");
+        if (!badge) return;
+        const creds = getDirectCreds();
+        badge.textContent = creds ? "已启用" : "未启用";
+        badge.classList.toggle("active", !!creds);
+      }
+
+      function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result || "";
+            const comma = result.indexOf(",");
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      async function uploadDirect(blob, creds, vocabItems) {
+        const base64 = await blobToBase64(blob);
+        const body = { audio: base64, task: "transcribe" };
+        if (vocabItems && vocabItems.length) {
+          body.initial_prompt = buildVocabPrompt(vocabItems);
+        }
+        const url =
+          "https://api.cloudflare.com/client/v4/accounts/" +
+          encodeURIComponent(creds.accountId) +
+          "/ai/run/@cf/openai/whisper-large-v3-turbo";
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + creds.token,
+          },
+          body: JSON.stringify(body),
+        });
+        let data = null;
+        try { data = await res.json(); } catch {}
+        if (!res.ok || !data || data.success === false) {
+          const msg =
+            (data && data.errors && data.errors[0] && data.errors[0].message) ||
+            ("HTTP " + res.status + " " + res.statusText);
+          throw new Error(msg);
+        }
+        const result = data.result || {};
+        return result.text || result.transcription_text || "";
       }
 
       function setStatus(html, kind) {
@@ -862,11 +993,30 @@
       }
 
       async function upload(blob) {
+        const vocabItems = loadVocabItems();
+        const creds = getDirectCreds();
+        if (creds) {
+          try {
+            setStatus("转写中… (直连 Cloudflare)");
+            const text = await uploadDirect(blob, creds, vocabItems);
+            setResult(text || "(模型返回空)");
+            const vocabHint = vocabItems.length ? " · 词典 " + vocabItems.length : "";
+            setStatus("完成 · 直连 ✓" + vocabHint, "ok");
+            if (autoCopyPending && text) {
+              await copyToClipboard(text);
+            }
+          } catch (err) {
+            setStatus("直连失败:" + (err.message || err), "error");
+          } finally {
+            autoCopyPending = false;
+            resetRecordButton();
+          }
+          return;
+        }
         try {
           const modeSel = $("modeSel");
           const mode = (modeSel && modeSel.value) || "clean";
           const params = new URLSearchParams({ mode });
-          const vocabItems = loadVocabItems();
           if (vocabItems.length) {
             params.set("vocab", buildVocabPrompt(vocabItems));
           }
@@ -1036,7 +1186,59 @@
         });
       }
 
+      function wireApiSettings() {
+        const btn = document.getElementById("apiSettingsBtn");
+        const modal = document.getElementById("apiModal");
+        const close = document.getElementById("apiClose");
+        const save = document.getElementById("apiSave");
+        const clear = document.getElementById("apiClear");
+        const accInput = document.getElementById("apiAccountInput");
+        const tokInput = document.getElementById("apiTokenInput");
+        if (!btn || !modal) return;
+
+        const open = () => {
+          try {
+            accInput.value = localStorage.getItem("cfAccountId") || "";
+            tokInput.value = localStorage.getItem("cfApiToken") || "";
+          } catch {}
+          modal.hidden = false;
+          setTimeout(() => accInput && accInput.focus(), 0);
+        };
+        const hide = () => { modal.hidden = true; };
+
+        btn.onclick = open;
+        if (close) close.onclick = hide;
+        modal.onclick = (e) => { if (e.target === modal) hide(); };
+        if (save) save.onclick = () => {
+          try {
+            const acc = accInput.value.trim();
+            const tok = tokInput.value.trim();
+            if (acc) localStorage.setItem("cfAccountId", acc);
+            else localStorage.removeItem("cfAccountId");
+            if (tok) localStorage.setItem("cfApiToken", tok);
+            else localStorage.removeItem("cfApiToken");
+          } catch {}
+          updateApiBadge();
+          hide();
+        };
+        if (clear) clear.onclick = () => {
+          try {
+            localStorage.removeItem("cfAccountId");
+            localStorage.removeItem("cfApiToken");
+          } catch {}
+          if (accInput) accInput.value = "";
+          if (tokInput) tokInput.value = "";
+          updateApiBadge();
+        };
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && !modal.hidden) hide();
+        });
+
+        updateApiBadge();
+      }
+
       popBtn.addEventListener("click", openPiP);
+      wireApiSettings();
       mountPreview();
     </script>
   </body>
