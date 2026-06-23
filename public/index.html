@@ -3,38 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CF Whisper · 画中画转写</title>
+    <title>voxsmith · 画中画转写</title>
     <style>
       :root {
-        color-scheme: dark;
-        --bg: #07070b;
-        --panel: rgba(18, 19, 28, 0.78);
-        --panel-solid: #11121b;
-        --fg: #ECECF3;
-        --muted: #888EA3;
-        --faint: #5A5F73;
-        --line: rgba(255, 255, 255, 0.08);
-        --line-strong: rgba(255, 255, 255, 0.14);
-        --inset: rgba(0, 0, 0, 0.35);
-        --accent: #6E7BFF;
-        --accent-2: #4DA6FF;
-        --accent-grad: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);
-        --danger: #FF4D6D;
-        --danger-grad: linear-gradient(135deg, #FF5470 0%, #FF7A4D 100%);
-        --ok: #34D399;
-        --r-lg: 22px;
-        --r-md: 14px;
-        --r-sm: 11px;
+        color-scheme: light;
+        --bg: #ECE9E4;
+        --panel: #FFFFFF;
+        --panel-solid: #FFFFFF;
+        --fg: #293756;
+        --navy: #293756;
+        --muted: #6E7689;
+        --faint: #A6AAB4;
+        --line: rgba(41, 55, 86, 0.12);
+        --line-strong: rgba(41, 55, 86, 0.22);
+        --inset: #F3F1ED;
+        --accent: #EE2031;
+        --accent-hover: #D2192A;
+        --accent-2: #84AAB5;
+        --ok: #3E6B77;
+        --r-lg: 16px;
+        --r-md: 10px;
+        --r-sm: 8px;
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; }
       body {
         background:
-          radial-gradient(900px 480px at 20% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
-          radial-gradient(760px 420px at 100% 110%, rgba(77, 141, 255, 0.16), transparent 60%),
+          radial-gradient(900px 480px at 20% -10%, rgba(238, 32, 49, 0.05), transparent 60%),
+          radial-gradient(760px 420px at 100% 110%, rgba(41, 55, 86, 0.05), transparent 60%),
           var(--bg);
         color: var(--fg);
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family: "CA Sans", "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
         -webkit-font-smoothing: antialiased;
         display: flex;
         align-items: center;
@@ -45,29 +44,16 @@
       .panel {
         position: relative;
         width: 100%;
-        max-width: 372px;
+        max-width: 330px;
         background: var(--panel);
-        backdrop-filter: blur(22px) saturate(140%);
-        -webkit-backdrop-filter: blur(22px) saturate(140%);
-        border: 1px solid var(--line);
         border-radius: var(--r-lg);
-        padding: 20px;
+        padding: 18px;
         box-shadow:
-          0 1px 0 rgba(255, 255, 255, 0.05) inset,
-          0 24px 60px -20px rgba(0, 0, 0, 0.7),
-          0 0 0 1px rgba(0, 0, 0, 0.4);
+          0 18px 48px -22px rgba(41, 55, 86, 0.45),
+          0 0 0 1px rgba(41, 55, 86, 0.04);
         display: flex;
         flex-direction: column;
-        gap: 14px;
-      }
-      .panel::before {
-        content: "";
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 120px;
-        border-radius: var(--r-lg) var(--r-lg) 0 0;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
-        pointer-events: none;
+        gap: 11px;
       }
 
       .stage {
@@ -80,17 +66,16 @@
         max-width: 100%;
         margin: auto;
       }
-      .stage > .panel { flex: 0 0 348px; align-self: stretch; max-width: none; }
+      .stage > .panel { flex: 0 0 330px; max-width: none; }
 
       .pip-frame {
-        flex: 0 0 360px;
-        align-self: stretch;
+        flex: 0 0 312px;
+        align-self: flex-start;
         background: var(--panel);
-        backdrop-filter: blur(22px) saturate(140%);
-        -webkit-backdrop-filter: blur(22px) saturate(140%);
-        border: 1px solid var(--line);
         border-radius: var(--r-lg);
-        box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 0, 0, 0.4);
+        box-shadow:
+          0 18px 48px -22px rgba(41, 55, 86, 0.45),
+          0 0 0 1px rgba(41, 55, 86, 0.04);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -99,17 +84,17 @@
         display: flex;
         align-items: center;
         gap: 9px;
-        padding: 11px 16px;
+        padding: 10px 14px;
         border-bottom: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.03);
+        background: var(--inset);
       }
       .pip-bar .lights { display: flex; gap: 6px; }
-      .pip-bar .lights i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
+      .pip-bar .lights i { width: 10px; height: 10px; border-radius: 50%; }
       .pip-bar .lights i:nth-child(1) { background: #FF5F57; }
       .pip-bar .lights i:nth-child(2) { background: #FEBC2E; }
       .pip-bar .lights i:nth-child(3) { background: #28C840; }
       .pip-bar .ttl {
-        font-size: 11px; font-weight: 650; letter-spacing: 0.04em;
+        font-size: 11px; font-weight: 650; letter-spacing: 0.02em;
         color: var(--muted); margin-left: 3px;
       }
       .pip-bar .live {
@@ -117,14 +102,15 @@
         text-transform: uppercase; color: var(--faint);
         display: inline-flex; align-items: center; gap: 6px;
       }
-      .pip-bar .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+      .pip-bar .live::before {
+        content: ""; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent-2);
+      }
       .pip-frame .panel {
         background: transparent; border: 0; box-shadow: none;
-        backdrop-filter: none; -webkit-backdrop-filter: none;
         border-radius: 0; max-width: none; flex: 1;
       }
-      .pip-frame .panel::before { display: none; }
-      .pip-note { padding: 44px 22px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+      .pip-note { padding: 36px 22px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
 
       .kicker {
         display: inline-flex;
@@ -138,107 +124,242 @@
       }
       .kicker .bead {
         width: 7px; height: 7px; border-radius: 50%;
-        background: var(--accent-grad);
-        box-shadow: 0 0 12px rgba(110, 123, 255, 0.9);
+        background: var(--accent);
+        box-shadow: 0 0 10px rgba(238, 32, 49, 0.5);
       }
       h1 {
         margin: 0;
         font-size: 21px;
         font-weight: 700;
         letter-spacing: -0.02em;
-        line-height: 1.15;
+        line-height: 1.2;
+        color: var(--fg);
       }
       p.sub { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
-      .row { display: flex; gap: 10px; }
 
+      /* ---------- Buttons (base) ---------- */
       button {
         appearance: none;
         border: 0;
-        padding: 13px 16px;
+        padding: 9px 14px;
         border-radius: var(--r-md);
-        font-size: 14px;
-        font-weight: 650;
+        font-size: 13px;
+        font-weight: 600;
         font-family: inherit;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.005em;
         cursor: pointer;
         color: #fff;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 9px;
-        transition: transform 0.08s ease, box-shadow 0.2s ease, background 0.25s ease, opacity 0.15s;
+        gap: 8px;
+        transition: transform 0.08s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.15s, color 0.2s ease, border-color 0.2s ease;
       }
       button:disabled { opacity: 0.42; cursor: not-allowed; }
       button:active:not(:disabled) { transform: scale(0.975); }
 
       .primary {
-        background: var(--accent-grad);
-        flex: 1;
-        box-shadow: 0 10px 26px -10px rgba(110, 123, 255, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        background: var(--accent);
+        flex: 1 1 auto;
+        box-shadow: 0 6px 16px -8px rgba(238, 32, 49, 0.6);
       }
-      .primary:hover:not(:disabled) { box-shadow: 0 14px 34px -10px rgba(110, 123, 255, 1), 0 0 0 1px rgba(255, 255, 255, 0.12) inset; }
+      .primary:hover:not(:disabled) { background: var(--accent-hover); }
       .primary::before {
         content: "";
-        width: 10px; height: 10px; border-radius: 50%;
+        width: 8px; height: 8px; border-radius: 50%;
         background: #fff;
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
       }
 
       .danger {
-        background: var(--danger-grad);
-        flex: 1;
-        box-shadow: 0 10px 26px -10px rgba(255, 77, 109, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        background: var(--accent);
+        flex: 1 1 auto;
+        box-shadow: 0 6px 16px -8px rgba(238, 32, 49, 0.6);
         animation: recPulse 1.6s ease-in-out infinite;
       }
       .danger::before {
         content: "";
-        width: 11px; height: 11px; border-radius: 3px;
+        width: 9px; height: 9px; border-radius: 2px;
         background: #fff;
       }
 
-      .ghost {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--line-strong);
-        color: var(--fg);
-        flex: 0 0 auto;
-        min-width: 52px;
-        padding: 13px;
-      }
-      .ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.11); }
-
       .hero {
         width: 100%;
-        padding: 15px 18px;
-        font-size: 15px;
-        background: var(--accent-grad);
-        box-shadow: 0 14px 34px -12px rgba(110, 123, 255, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        padding: 13px 18px;
+        font-size: 14px;
+        background: var(--accent);
+        border-radius: var(--r-md);
+        box-shadow: 0 8px 22px -10px rgba(238, 32, 49, 0.7);
       }
       .hero::before {
         content: "";
-        width: 13px; height: 13px;
+        width: 12px; height: 12px;
         border: 2px solid #fff;
-        border-radius: 4px;
+        border-radius: 3px;
         box-shadow: 4px -4px 0 -1px var(--accent);
-        margin-top: -3px; margin-right: 1px;
+        margin-right: 2px;
       }
-      .hero:hover:not(:disabled) { box-shadow: 0 18px 40px -12px rgba(110, 123, 255, 1), 0 0 0 1px rgba(255, 255, 255, 0.12) inset; }
+      .hero:hover:not(:disabled) { background: var(--accent-hover); }
+      .hero:disabled { opacity: 0.55; }
 
-      .field-label {
+      /* ---------- Icon buttons ---------- */
+      .icon-btn {
+        flex: 0 0 auto;
+        width: 30px; height: 30px;
+        padding: 0;
+        background: transparent;
+        color: var(--muted);
+        border-radius: var(--r-md);
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: background 0.18s, color 0.18s, transform 0.2s ease;
+      }
+      .icon-btn:hover:not(:disabled) { background: var(--inset); color: var(--fg); }
+      .icon-btn.sm { width: 26px; height: 26px; border-radius: 8px; }
+      .icon-btn:disabled { opacity: 0.3; }
+      #settingsBtn.open {
+        color: var(--accent);
+        transform: rotate(35deg);
+      }
+
+      /* ---------- Actions row (collapsed default state) ---------- */
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* ---------- "Last result" capsule ---------- */
+      .last-strip {
+        position: relative;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--inset);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        padding: 9px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        cursor: pointer;
+        user-select: none;
+        transition: border-color 0.18s, color 0.18s, background 0.18s;
+      }
+      .last-strip:hover, .last-strip:focus-visible {
+        border-color: var(--line-strong);
+        color: var(--fg);
+        outline: none;
+      }
+      .last-strip .ls-chev {
+        transition: transform 0.2s ease;
+        color: currentColor;
+      }
+      .panel.expanded .last-strip .ls-chev { transform: rotate(180deg); }
+      .last-tip {
+        display: none;
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 8px);
+        width: 234px;
+        max-width: 78vw;
+        max-height: 66px;
+        overflow: hidden;
+        padding: 10px 12px;
+        background: var(--navy);
+        color: #fff;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.5;
+        letter-spacing: 0.01em;
+        pointer-events: none;
+        white-space: pre-wrap;
+        z-index: 50;
+        box-shadow: 0 10px 24px -10px rgba(41, 55, 86, 0.5);
+      }
+      .last-tip::after {
+        content: "";
+        position: absolute;
+        left: 0; right: 0; bottom: 0;
+        height: 20px;
+        background: linear-gradient(180deg, transparent, var(--navy));
+        pointer-events: none;
+      }
+      .panel:not(.expanded) .last-strip.has-text:hover .last-tip { display: block; }
+
+      /* ---------- Result region (hidden until expanded) ---------- */
+      .result-wrap {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .panel.expanded .result-wrap { display: flex; }
+      .result-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .rh-label {
         font-size: 10.5px;
         font-weight: 700;
         letter-spacing: 0.16em;
         text-transform: uppercase;
         color: var(--faint);
-        margin-bottom: -6px;
+      }
+      .result {
+        background: var(--inset);
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        padding: 13px 14px;
+        font-size: 14px;
+        line-height: 1.62;
+        color: var(--navy);
+        white-space: pre-wrap;
+        min-height: 132px;
+        max-height: 300px;
+        overflow-y: auto;
+        outline: none;
+        transition: border-color 0.18s, box-shadow 0.18s;
+      }
+      .result:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(238, 32, 49, 0.14);
+      }
+      .result:empty::before { content: "转写结果会出现在这里 · 可直接编辑"; color: var(--faint); }
+      .result::-webkit-scrollbar { width: 8px; }
+      .result::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 8px; }
+
+      /* ---------- Settings collapsible panel ---------- */
+      .settings-pop {
+        display: none;
+        flex-direction: column;
+        gap: 11px;
+        margin-top: 2px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }
+      #settingsPop.open { display: flex; }
+      .sp-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--faint);
+        margin-bottom: -4px;
+      }
+      .sp-divider {
+        height: 1px;
+        background: var(--line);
+        margin: 4px 0 2px;
       }
       select {
         appearance: none;
-        background: rgba(0, 0, 0, 0.28);
+        background: var(--inset);
         color: var(--fg);
         border: 1px solid var(--line);
         border-radius: var(--r-md);
-        padding: 12px 36px 12px 14px;
-        font-size: 13px;
+        padding: 9px 32px 9px 12px;
+        font-size: 12.5px;
         font-weight: 550;
         font-family: inherit;
         width: 100%;
@@ -247,7 +368,7 @@
         background-image:
           linear-gradient(45deg, transparent 50%, var(--muted) 50%),
           linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-        background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+        background-position: calc(100% - 16px) center, calc(100% - 11px) center;
         background-size: 6px 6px, 6px 6px;
         background-repeat: no-repeat;
       }
@@ -255,10 +376,11 @@
       select:focus {
         outline: none;
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.22);
+        box-shadow: 0 0 0 3px rgba(238, 32, 49, 0.14);
       }
       select option { background: var(--panel-solid); color: var(--fg); }
 
+      /* ---------- Toggle switch ---------- */
       .opt-row {
         display: flex;
         align-items: center;
@@ -274,28 +396,115 @@
         flex: 0 0 auto;
         width: 36px; height: 21px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid var(--line-strong);
+        background: #E2DED7;
         position: relative;
         cursor: pointer;
-        transition: background 0.2s ease, border-color 0.2s;
+        transition: background 0.2s ease;
       }
       .opt-row input[type="checkbox"]::before {
         content: "";
         position: absolute;
-        top: 2px; left: 2px;
+        top: 3px; left: 3px;
         width: 15px; height: 15px;
         border-radius: 50%;
         background: #fff;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 1px 3px rgba(41, 55, 86, 0.25);
         transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
-      .opt-row input[type="checkbox"]:checked {
-        background: var(--accent-grad);
-        border-color: transparent;
-      }
+      .opt-row input[type="checkbox"]:checked { background: var(--accent); }
       .opt-row input[type="checkbox"]:checked::before { transform: translateX(15px); }
 
+      /* ---------- Vocab / learn / api buttons inside settings ---------- */
+      .vocab-btn {
+        background: var(--inset);
+        border: 1px solid var(--line);
+        color: var(--fg);
+        padding: 9px 12px;
+        border-radius: var(--r-md);
+        font-family: inherit;
+        font-size: 12.5px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: background 0.18s, border-color 0.18s;
+        width: 100%;
+      }
+      .vocab-btn:hover { background: #ECE7DF; border-color: var(--line-strong); }
+      .vocab-btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px; height: 22px;
+        border-radius: 6px;
+        background: rgba(238, 32, 49, 0.12);
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .vocab-btn-label { color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+      .vocab-count {
+        margin-left: auto;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 9px;
+        color: var(--muted);
+        min-width: 22px;
+        text-align: center;
+      }
+      .vocab-count.active {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 0 8px rgba(238, 32, 49, 0.35);
+      }
+      .learn-row {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .learn-row .vocab-btn { flex: 1 1 auto; width: auto; }
+      .learn-btn {
+        background: var(--inset);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        padding: 9px 12px;
+        border-radius: var(--r-md);
+        font-family: inherit;
+        font-size: 12.5px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: background 0.18s, border-color 0.18s, color 0.18s, opacity 0.18s;
+        white-space: nowrap;
+      }
+      .learn-btn:hover:not(:disabled) {
+        background: #ECE7DF;
+        border-color: var(--line-strong);
+        color: var(--fg);
+      }
+      .learn-btn:disabled { opacity: 0.42; cursor: not-allowed; }
+      .learn-btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px; height: 22px;
+        border-radius: 6px;
+        background: rgba(238, 32, 49, 0.12);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      /* ---------- Recording waveform ---------- */
       .wave {
         display: flex;
         align-items: center;
@@ -310,7 +519,7 @@
         width: 3px;
         height: 100%;
         border-radius: 3px;
-        background: var(--danger-grad);
+        background: var(--accent);
         transform-origin: center;
         animation: eq 0.9s ease-in-out infinite;
       }
@@ -323,8 +532,9 @@
       .wave i:nth-child(7) { animation-delay: -0.55s; }
       .wave i:nth-child(8) { animation-delay: -0.25s; }
       .wave i:nth-child(9) { animation-delay: -0.7s; }
-      .panel:has(#recordBtn.danger) .wave { height: 26px; opacity: 1; }
+      .panel:has(#recordBtn.danger) .wave { height: 18px; opacity: 1; }
 
+      /* ---------- Status ---------- */
       .status {
         font-size: 11.5px;
         font-weight: 550;
@@ -332,162 +542,29 @@
         min-height: 16px;
         display: flex;
         align-items: center;
+        justify-content: center;
+        text-align: center;
         letter-spacing: 0.01em;
       }
-      .status.error { color: var(--danger); }
+      .status.error { color: var(--accent); }
       .status.ok { color: var(--ok); }
       .dot {
         display: inline-block;
         width: 7px; height: 7px;
         border-radius: 50%;
-        background: var(--danger);
+        background: var(--accent);
         margin-right: 7px;
-        box-shadow: 0 0 8px rgba(255, 77, 109, 0.9);
+        box-shadow: 0 0 8px rgba(238, 32, 49, 0.6);
         animation: pulse 1s infinite;
       }
 
-      .result {
-        background: rgba(0, 0, 0, 0.32);
-        border: 1px solid var(--line);
-        border-radius: var(--r-md);
-        padding: 13px 14px;
-        font-size: 13.5px;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        min-height: 70px;
-        max-height: 220px;
-        overflow-y: auto;
-        outline: none;
-        transition: border-color 0.18s, box-shadow 0.18s;
-      }
-      .result:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.18);
-      }
-      .result:empty::before { content: "转写结果会出现在这里 · 可直接编辑"; color: var(--faint); }
-      .result::-webkit-scrollbar { width: 8px; }
-      .result::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
-
-      .vocab-btn {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid var(--line);
-        color: var(--fg);
-        padding: 10px 12px;
-        border-radius: var(--r-md);
-        font-family: inherit;
-        font-size: 12.5px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-        transition: background 0.18s, border-color 0.18s;
-        width: 100%;
-      }
-      .vocab-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--line-strong); }
-      .vocab-btn-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px; height: 22px;
-        border-radius: 6px;
-        background: rgba(110, 123, 255, 0.18);
-        color: #BFC7FF;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-      }
-      .vocab-btn-label { color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
-      .vocab-count {
-        margin-left: auto;
-        font-size: 10.5px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 999px;
-        padding: 2px 9px;
-        color: var(--fg);
-        min-width: 22px;
-        text-align: center;
-      }
-      .vocab-count.active {
-        background: var(--accent-grad);
-        box-shadow: 0 0 10px rgba(110, 123, 255, 0.55);
-        color: #fff;
-      }
-      .learn-row {
-        display: flex;
-        gap: 8px;
-        align-items: stretch;
-      }
-      .learn-row .vocab-btn { flex: 1 1 auto; }
-      .learn-btn {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid var(--line);
-        color: var(--muted);
-        padding: 10px 14px;
-        border-radius: var(--r-md);
-        font-family: inherit;
-        font-size: 12.5px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        transition: background 0.18s, border-color 0.18s, color 0.18s, opacity 0.18s;
-        white-space: nowrap;
-      }
-      .learn-btn:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: var(--line-strong);
-        color: var(--fg);
-      }
-      .learn-btn:disabled { opacity: 0.42; cursor: not-allowed; }
-      .learn-btn-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px; height: 22px;
-        border-radius: 6px;
-        background: rgba(110, 123, 255, 0.18);
-        color: #BFC7FF;
-        font-size: 13px;
-        font-weight: 800;
-      }
-      .learn-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin: 8px 16px 4px;
-        max-height: 260px;
-        overflow-y: auto;
-      }
-      .learn-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 11px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid var(--line);
-        border-radius: var(--r-sm);
-        cursor: pointer;
-        font-size: 13px;
-      }
-      .learn-item input { cursor: pointer; }
-      .learn-item-word { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-      .learn-empty {
-        padding: 22px 16px;
-        text-align: center;
-        color: var(--faint);
-        font-size: 13px;
-      }
-
+      /* ---------- Modals (main document only) ---------- */
       .modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(4, 4, 8, 0.62);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        background: rgba(41, 55, 86, 0.42);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -505,7 +582,7 @@
         max-height: calc(100vh - 32px);
         display: flex;
         flex-direction: column;
-        box-shadow: 0 30px 80px -18px rgba(0, 0, 0, 0.8);
+        box-shadow: 0 30px 80px -18px rgba(41, 55, 86, 0.5);
         overflow: hidden;
         animation: modalRise 0.22s cubic-bezier(0.2, 0.9, 0.4, 1.15);
       }
@@ -516,7 +593,7 @@
         padding: 14px 16px 12px;
         border-bottom: 1px solid var(--line);
       }
-      .modal-title { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+      .modal-title { margin: 0; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--fg); }
       .modal-close {
         margin-left: auto;
         background: transparent;
@@ -529,14 +606,21 @@
         border-radius: 8px;
         transition: background 0.15s, color 0.15s;
       }
-      .modal-close:hover { background: rgba(255, 255, 255, 0.08); color: var(--fg); }
+      .modal-close:hover { background: var(--inset); color: var(--fg); }
       .modal-hint { margin: 0; padding: 12px 16px 4px; font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+      .modal-hint code {
+        background: var(--inset);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 11px;
+      }
       .vocab-input-lg {
         margin: 8px 16px 12px;
         flex: 1;
         min-height: 200px;
         resize: none;
-        background: rgba(0, 0, 0, 0.32);
+        background: var(--inset);
         color: var(--fg);
         border: 1px solid var(--line);
         border-radius: var(--r-sm);
@@ -549,7 +633,7 @@
       }
       .vocab-input-lg:focus {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.18);
+        box-shadow: 0 0 0 3px rgba(238, 32, 49, 0.14);
       }
       .vocab-input-lg::placeholder { color: var(--faint); }
       .modal-foot {
@@ -558,17 +642,29 @@
         gap: 12px;
         padding: 12px 16px 14px;
         border-top: 1px solid var(--line);
-        background: rgba(0, 0, 0, 0.22);
+        background: var(--inset);
       }
       .modal-count { font-size: 11.5px; color: var(--muted); }
       .modal-count b { color: var(--fg); font-weight: 700; }
       .modal-done {
         margin-left: auto;
-        background: var(--accent-grad);
+        background: var(--accent);
         padding: 9px 18px;
         font-size: 13px;
         border-radius: var(--r-md);
+        color: #fff;
       }
+      .modal-done:hover:not(:disabled) { background: var(--accent-hover); }
+      .ghost {
+        background: #fff;
+        border: 1px solid var(--line-strong);
+        color: var(--fg);
+        padding: 9px 14px;
+        font-size: 13px;
+        border-radius: var(--r-md);
+        min-width: auto;
+      }
+      .ghost:hover:not(:disabled) { background: var(--inset); }
       .api-field {
         display: flex;
         flex-direction: column;
@@ -591,7 +687,7 @@
         margin-left: 4px;
       }
       .api-input {
-        background: rgba(0, 0, 0, 0.32);
+        background: var(--inset);
         color: var(--fg);
         border: 1px solid var(--line);
         border-radius: var(--r-sm);
@@ -603,13 +699,37 @@
       }
       .api-input:focus {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(110, 123, 255, 0.18);
+        box-shadow: 0 0 0 3px rgba(238, 32, 49, 0.14);
       }
       .api-input::placeholder { color: var(--faint); }
-      .modal-foot .ghost {
-        padding: 9px 14px;
+
+      .learn-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 8px 16px 4px;
+        max-height: 260px;
+        overflow-y: auto;
+      }
+      .learn-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 11px;
+        background: var(--inset);
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        cursor: pointer;
         font-size: 13px;
-        min-width: auto;
+        color: var(--fg);
+      }
+      .learn-item input { cursor: pointer; }
+      .learn-item-word { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+      .learn-empty {
+        padding: 22px 16px;
+        text-align: center;
+        color: var(--faint);
+        font-size: 13px;
       }
 
       @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
@@ -618,6 +738,7 @@
         to { opacity: 1; transform: translateY(0) scale(1); }
       }
 
+      /* ---------- Long-press stop menu ---------- */
       .stop-menu {
         position: fixed;
         display: flex;
@@ -628,32 +749,30 @@
         animation: menuIn 0.14s ease-out;
       }
       .stop-opt {
-        background: rgba(24, 25, 36, 0.92);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
+        background: #fff;
         color: var(--fg);
         border: 1px solid var(--line-strong);
         border-radius: var(--r-md);
-        padding: 12px 16px;
+        padding: 11px 16px;
         font-size: 13px;
         font-weight: 600;
         text-align: center;
         pointer-events: auto;
-        transition: background 0.12s, transform 0.1s, border-color 0.12s, box-shadow 0.12s;
-        box-shadow: 0 10px 28px -8px rgba(0, 0, 0, 0.6);
+        transition: background 0.12s, transform 0.1s, border-color 0.12s, box-shadow 0.12s, color 0.12s;
+        box-shadow: 0 12px 28px -10px rgba(41, 55, 86, 0.5);
       }
       .stop-opt.hot {
-        background: var(--accent-grad);
+        background: var(--accent);
         border-color: transparent;
         color: #fff;
         transform: scale(1.04);
-        box-shadow: 0 14px 32px -8px rgba(110, 123, 255, 0.9);
+        box-shadow: 0 14px 32px -8px rgba(238, 32, 49, 0.7);
       }
 
       @keyframes pulse { 0%, 100% { opacity: 0.4 } 50% { opacity: 1 } }
       @keyframes recPulse {
-        0%, 100% { box-shadow: 0 10px 26px -10px rgba(255, 77, 109, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) inset; }
-        50% { box-shadow: 0 10px 30px -8px rgba(255, 77, 109, 1), 0 0 0 4px rgba(255, 77, 109, 0.18) inset; }
+        0%, 100% { box-shadow: 0 6px 16px -8px rgba(238, 32, 49, 0.6); }
+        50% { box-shadow: 0 8px 20px -6px rgba(238, 32, 49, 0.9), 0 0 0 4px rgba(238, 32, 49, 0.14) inset; }
       }
       @keyframes eq {
         0%, 100% { transform: scaleY(0.28); }
@@ -668,53 +787,10 @@
         <span class="kicker"><span class="bead"></span>实时语音转写</span>
         <h1>边缘语音转写</h1>
         <p class="sub">
-          把工具弹成系统级"画中画"小窗 —— 始终浮在最上层,切到任何应用都能录音转写,转完直接复制。
+          把工具弹成系统级"画中画"小窗 —— 始终浮在最上层，切到任何应用都能录音转写，转完直接复制。
         </p>
         <button id="popBtn" class="hero">弹出录音小窗</button>
-        <p class="sub" id="hint">右侧是小窗的实时预览,可直接录音试用。</p>
-        <button type="button" id="apiSettingsBtn" class="vocab-btn">
-          <span class="vocab-btn-icon">⚙</span>
-          <span class="vocab-btn-label">直连 API · 用自己的额度</span>
-          <span class="vocab-count" id="apiStatusBadge">未启用</span>
-        </button>
-      </div>
-
-      <div class="modal-backdrop" id="apiModal" hidden>
-        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
-          <div class="modal-head">
-            <h3 class="modal-title" id="apiModalTitle">直连 Cloudflare API</h3>
-            <button type="button" class="modal-close" id="apiClose" aria-label="关闭">×</button>
-          </div>
-          <p class="modal-hint">
-            填入你自己的 <b>Account ID</b> 和 <b>API Token</b>,
-            前端会绕过 Worker、直接调 <code>api.cloudflare.com</code>,使用<strong>你自己的额度</strong>跑 Whisper。
-            凭据只存在本浏览器,不会上传到服务器。<br /><br />
-            ⚠️ Cloudflare Token <strong>只勾 Workers AI Read 权限</strong>,
-            不要给 Edit / Account 级别。<br /><br />
-            想在直连模式下也用 refine(清理 / 润色 / 结构化)?
-            额外填一个 <b>Cerebras API Key</b>,前端会直接调
-            <code>api.cerebras.ai</code> 跑 <code>gpt-oss-120b</code> 做后处理,同样不经过本服务器。留空就只输出原始转写。
-          </p>
-          <label class="api-field">
-            <span class="api-label">Account ID</span>
-            <input type="text" id="apiAccountInput" class="api-input"
-              placeholder="32 位字符,在 Cloudflare 控制台右侧栏" spellcheck="false" autocomplete="off" />
-          </label>
-          <label class="api-field">
-            <span class="api-label">Cloudflare API Token</span>
-            <input type="password" id="apiTokenInput" class="api-input"
-              placeholder="My Profile → API Tokens → Create Token" spellcheck="false" autocomplete="off" />
-          </label>
-          <label class="api-field">
-            <span class="api-label">Cerebras API Key <span class="api-label-hint">(可选 · 用于 refine)</span></span>
-            <input type="password" id="apiCerebrasInput" class="api-input"
-              placeholder="cerebras.ai → API Keys (留空则跳过 refine)" spellcheck="false" autocomplete="off" />
-          </label>
-          <div class="modal-foot">
-            <button type="button" id="apiClear" class="ghost">清除</button>
-            <button type="button" id="apiSave" class="modal-done">保存</button>
-          </div>
-        </div>
+        <p class="sub" id="hint">右侧是小窗的实时预览，可直接录音试用。</p>
       </div>
 
       <div class="pip-frame" id="pipFrame">
@@ -727,70 +803,142 @@
       </div>
     </div>
 
-    <template id="pipTemplate">
-      <div class="panel">
-        <span class="field-label">Refine 模式</span>
-        <select id="modeSel" title="录音前选择一种 refine 模式">
-          <option value="clean">清理 · 去口头语 / 修标点</option>
-          <option value="polish">轻结构化 · 邮件 / 聊天</option>
-          <option value="structure-en">结构化 Prompt · 英文输出</option>
-          <option value="structure-zh">结构化 Prompt · 中文输出</option>
-          <option value="raw">原始 · 不处理</option>
-        </select>
-        <div class="row">
-          <button id="recordBtn" class="primary">开始说话</button>
-          <button id="copyBtn" class="ghost" disabled title="复制结果">复制</button>
+    <!-- ============== Modals (live in main document only) ============== -->
+    <div class="modal-backdrop" id="apiModal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="apiModalTitle">
+        <div class="modal-head">
+          <h3 class="modal-title" id="apiModalTitle">直连 Cloudflare API</h3>
+          <button type="button" class="modal-close" id="apiClose" aria-label="关闭">×</button>
         </div>
-        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <label class="opt-row" for="autoCopyChk">
-          <input type="checkbox" id="autoCopyChk" />
-          <span>结束后自动复制(长按"停止"可临时切换)</span>
+        <p class="modal-hint">
+          填入你自己的 <b>Account ID</b> 和 <b>API Token</b>，
+          前端会绕过 Worker、直接调 <code>api.cloudflare.com</code>，使用<strong>你自己的额度</strong>跑 Whisper。
+          凭据只存在本浏览器，不会上传到服务器。<br /><br />
+          ⚠️ Cloudflare Token <strong>只勾 Workers AI Read 权限</strong>，
+          不要给 Edit / Account 级别。<br /><br />
+          想在直连模式下也用 refine（清理 / 润色 / 结构化）？
+          额外填一个 <b>Cerebras API Key</b>，前端会直接调
+          <code>api.cerebras.ai</code> 跑 <code>gpt-oss-120b</code> 做后处理，同样不经过本服务器。留空就只输出原始转写。
+        </p>
+        <label class="api-field">
+          <span class="api-label">Account ID</span>
+          <input type="text" id="apiAccountInput" class="api-input"
+            placeholder="32 位字符，在 Cloudflare 控制台右侧栏" spellcheck="false" autocomplete="off" />
         </label>
-        <div class="learn-row">
-          <button type="button" id="vocabBtn" class="vocab-btn">
-            <span class="vocab-btn-icon">Aa</span>
-            <span class="vocab-btn-label">自定义词汇</span>
-            <span class="vocab-count" id="vocabCountBadge">0</span>
-          </button>
-          <button type="button" id="learnBtn" class="learn-btn" disabled title="把你刚才的修改加入词典">
-            <span class="learn-btn-icon">↺</span>
-            <span class="learn-btn-label">学习修改</span>
-          </button>
+        <label class="api-field">
+          <span class="api-label">Cloudflare API Token</span>
+          <input type="password" id="apiTokenInput" class="api-input"
+            placeholder="My Profile → API Tokens → Create Token" spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="api-field">
+          <span class="api-label">Cerebras API Key <span class="api-label-hint">(可选 · 用于 refine)</span></span>
+          <input type="password" id="apiCerebrasInput" class="api-input"
+            placeholder="cerebras.ai → API Keys (留空则跳过 refine)" spellcheck="false" autocomplete="off" />
+        </label>
+        <div class="modal-foot">
+          <button type="button" id="apiClear" class="ghost">清除</button>
+          <button type="button" id="apiSave" class="modal-done">保存</button>
         </div>
-        <div class="modal-backdrop" id="learnModal" hidden>
-          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="learnModalTitle">
-            <div class="modal-head">
-              <h3 class="modal-title" id="learnModalTitle">把这些词加入词典?</h3>
-              <button type="button" class="modal-close" id="learnClose" aria-label="关闭">×</button>
-            </div>
-            <p class="modal-hint">下面这些词在你编辑后的结果里出现,但原始转写里没有——很可能是你纠正的专有名词或拼写。勾选你想加入"自定义词汇"的项,下一次录音 Whisper 和 refine 会优先匹配它们。</p>
-            <div id="learnList" class="learn-list"></div>
-            <div class="modal-foot">
-              <button type="button" id="learnCancel" class="ghost">取消</button>
-              <button type="button" id="learnConfirm" class="modal-done">添加到词典</button>
-            </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="vocabModal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="vocabModalTitle">
+        <div class="modal-head">
+          <h3 class="modal-title" id="vocabModalTitle">自定义词汇</h3>
+          <button type="button" class="modal-close" id="vocabClose" aria-label="关闭">×</button>
+        </div>
+        <p class="modal-hint">每行一个词，或用逗号 / 顿号 / 分号分隔。这些词会作为提示传给 Whisper，帮助它正确拼写专有名词和缩写。</p>
+        <textarea
+          id="vocabInput"
+          class="vocab-input-lg"
+          spellcheck="false"
+          placeholder="git&#10;TypeScript&#10;Kubernetes"></textarea>
+        <div class="modal-foot">
+          <span class="modal-count">已录入 <b id="vocabCount">0</b> 个词</span>
+          <button type="button" class="modal-done" id="vocabDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="learnModal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="learnModalTitle">
+        <div class="modal-head">
+          <h3 class="modal-title" id="learnModalTitle">把这些词加入词典？</h3>
+          <button type="button" class="modal-close" id="learnClose" aria-label="关闭">×</button>
+        </div>
+        <p class="modal-hint">下面这些词在你编辑后的结果里出现，但原始转写里没有——很可能是你纠正的专有名词或拼写。勾选你想加入"自定义词汇"的项，下一次录音 Whisper 和 refine 会优先匹配它们。</p>
+        <div id="learnList" class="learn-list"></div>
+        <div class="modal-foot">
+          <button type="button" id="learnCancel" class="ghost">取消</button>
+          <button type="button" id="learnConfirm" class="modal-done">添加到词典</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== PiP small-window template ============== -->
+    <template id="pipTemplate">
+      <div class="panel" id="panel">
+        <!-- A. Result region (hidden by default; revealed when .panel.expanded) -->
+        <div id="resultWrap" class="result-wrap">
+          <div class="result-head">
+            <span class="rh-label">转写结果</span>
+            <button id="copyBtn" class="icon-btn sm" disabled title="复制结果" aria-label="复制"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
           </div>
+          <div id="result" class="result" contenteditable="true" spellcheck="false"></div>
         </div>
-        <div class="modal-backdrop" id="vocabModal" hidden>
-          <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="vocabModalTitle">
-            <div class="modal-head">
-              <h3 class="modal-title" id="vocabModalTitle">自定义词汇</h3>
-              <button type="button" class="modal-close" id="vocabClose" aria-label="关闭">×</button>
-            </div>
-            <p class="modal-hint">每行一个词,或用逗号 / 顿号 / 分号分隔。这些词会作为提示传给 Whisper,帮助它正确拼写专有名词和缩写。</p>
-            <textarea
-              id="vocabInput"
-              class="vocab-input-lg"
-              spellcheck="false"
-              placeholder="git&#10;TypeScript&#10;Kubernetes"></textarea>
-            <div class="modal-foot">
-              <span class="modal-count">已录入 <b id="vocabCount">0</b> 个词</span>
-              <button type="button" class="modal-done" id="vocabDone">完成</button>
-            </div>
+
+        <!-- B. Waveform (shown only while recording) -->
+        <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+        <!-- C. Action row -->
+        <div class="actions">
+          <button id="recordBtn" class="primary">开始说话</button>
+          <div id="lastBtn" class="last-strip" role="button" tabindex="0" aria-expanded="false" aria-label="切换上次结果">
+            <span class="ls-text">上次结果</span>
+            <svg class="ls-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+            <div id="lastTip" class="last-tip"></div>
           </div>
+          <button id="settingsBtn" class="icon-btn" title="设置" aria-label="设置"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
         </div>
+
+        <!-- D. Settings collapsible panel -->
+        <div id="settingsPop" class="settings-pop">
+          <div class="sp-label">Refine 模式</div>
+          <select id="modeSel" title="录音前选择一种 refine 模式">
+            <option value="clean">清理 · 去口头语 / 修标点</option>
+            <option value="polish">轻结构化 · 邮件 / 聊天</option>
+            <option value="structure-en">结构化 Prompt · 英文输出</option>
+            <option value="structure-zh">结构化 Prompt · 中文输出</option>
+            <option value="raw">原始 · 不处理</option>
+          </select>
+          <label class="opt-row" for="autoCopyChk">
+            <input type="checkbox" id="autoCopyChk" />
+            <span>结束后自动复制（长按"停止"可临时切换）</span>
+          </label>
+          <div class="sp-divider"></div>
+          <div class="sp-label">自定义词汇</div>
+          <div class="learn-row">
+            <button type="button" id="vocabBtn" class="vocab-btn">
+              <span class="vocab-btn-icon">Aa</span>
+              <span class="vocab-btn-label">自定义词汇</span>
+              <span class="vocab-count" id="vocabCountBadge">0</span>
+            </button>
+            <button type="button" id="learnBtn" class="learn-btn" disabled title="把你刚才的修改加入词典">
+              <span class="learn-btn-icon">↺</span>
+              <span class="vocab-btn-label">学习修改</span>
+            </button>
+          </div>
+          <div class="sp-divider"></div>
+          <button type="button" id="apiSettingsBtn" class="vocab-btn">
+            <span class="vocab-btn-icon">⚙</span>
+            <span class="vocab-btn-label">直连 API · 用自己的额度</span>
+            <span class="vocab-count" id="apiStatusBadge">未启用</span>
+          </button>
+        </div>
+
+        <!-- E. Status -->
         <div id="status" class="status">就绪</div>
-        <div id="result" class="result" contenteditable="true" spellcheck="false"></div>
       </div>
     </template>
 
@@ -801,11 +949,20 @@
         parseMode,
       } from "./refine-prompts.js";
 
+      // ---------- PiP window size constants ----------
+      const PIP_W = 330;
+      const PIP_H_COLLAPSED = 196;
+      const PIP_H_EXPANDED = 440;
+      const PIP_H_SETTINGS = 200;
+      const LONG_PRESS_MS = 350;
+
+      // ---------- DOM handles ----------
       const popBtn = document.getElementById("popBtn");
       const hintEl = document.getElementById("hint");
       const tpl = document.getElementById("pipTemplate");
       const pipSlot = document.getElementById("pipSlot");
 
+      // ---------- State ----------
       let pipWindow = null;
       let activeDoc = null;
       let mediaRecorder = null;
@@ -819,10 +976,13 @@
       let openByoModal = null;
       let lastRawText = "";
       let lastRefinedText = "";
-      const LONG_PRESS_MS = 350;
+      let resultExpanded = false;
+      let settingsOpen = false;
+      let outsideCloser = null;
 
       const $ = (id) => (activeDoc || document).getElementById(id);
 
+      // ---------- Vocab helpers ----------
       function parseVocab(raw) {
         if (!raw) return [];
         return raw
@@ -837,10 +997,9 @@
           return [];
         }
       }
-      function buildVocabPrompt(items) {
-        return items.join(", ");
-      }
+      function buildVocabPrompt(items) { return items.join(", "); }
 
+      // ---------- Direct-API creds ----------
       function getDirectCreds() {
         try {
           const accountId = (localStorage.getItem("cfAccountId") || "").trim();
@@ -849,7 +1008,6 @@
         } catch {}
         return null;
       }
-
       function getCerebrasKey() {
         try {
           const key = (localStorage.getItem("cerebrasApiKey") || "").trim();
@@ -857,9 +1015,8 @@
         } catch {}
         return null;
       }
-
       function updateApiBadge() {
-        const badge = document.getElementById("apiStatusBadge");
+        const badge = $("apiStatusBadge");
         if (!badge) return;
         const creds = getDirectCreds();
         const cerebras = getCerebrasKey();
@@ -871,6 +1028,7 @@
         badge.classList.toggle("active", !!(creds || cerebras));
       }
 
+      // ---------- Cerebras refine ----------
       const CEREBRAS_ENDPOINT = "https://api.cerebras.ai/v1/chat/completions";
       const CEREBRAS_MODEL = "gpt-oss-120b";
 
@@ -892,11 +1050,7 @@
             "Content-Type": "application/json",
             Authorization: "Bearer " + cerebrasKey,
           },
-          body: JSON.stringify({
-            model: CEREBRAS_MODEL,
-            messages,
-            temperature: 0.3,
-          }),
+          body: JSON.stringify({ model: CEREBRAS_MODEL, messages, temperature: 0.3 }),
         });
         if (!res.ok) {
           let detail = "HTTP " + res.status;
@@ -938,6 +1092,7 @@
         return (data && (data.text || data.transcription_text)) || "";
       }
 
+      // ---------- UI helpers ----------
       function setStatus(html, kind) {
         const el = $("status");
         if (!el) return;
@@ -951,11 +1106,75 @@
         r.textContent = text || "";
         const c = $("copyBtn");
         if (c) c.disabled = !text;
+        updateLastTip();
         refreshLearnButton();
       }
 
-      const LATIN_TOKEN_RE = /[A-Za-z][A-Za-z0-9_+\-]{1,30}/g;
+      function updateLastTip() {
+        const r = $("result");
+        const strip = $("lastBtn");
+        const tip = $("lastTip");
+        if (!strip || !tip) return;
+        const text = (r && r.textContent ? r.textContent : "").trim();
+        if (text) {
+          strip.classList.add("has-text");
+          tip.textContent = text;
+        } else {
+          strip.classList.remove("has-text");
+          tip.textContent = "";
+        }
+      }
 
+      // ---------- Expand / collapse / resize ----------
+      function currentHeight() {
+        return (resultExpanded ? PIP_H_EXPANDED : PIP_H_COLLAPSED) + (settingsOpen ? PIP_H_SETTINGS : 0);
+      }
+      function applyHeight() {
+        if (pipWindow && !pipWindow.closed) {
+          try { pipWindow.resizeTo(PIP_W, currentHeight()); } catch {}
+        }
+      }
+      function setExpanded(next) {
+        resultExpanded = !!next;
+        const panel = $("panel");
+        const strip = $("lastBtn");
+        const lsText = strip ? strip.querySelector(".ls-text") : null;
+        if (panel) panel.classList.toggle("expanded", resultExpanded);
+        if (strip) strip.setAttribute("aria-expanded", resultExpanded ? "true" : "false");
+        if (lsText) lsText.textContent = resultExpanded ? "收起" : "上次结果";
+        applyHeight();
+      }
+      function setSettingsOpen(next) {
+        settingsOpen = !!next;
+        const pop = $("settingsPop");
+        const btn = $("settingsBtn");
+        if (pop) pop.classList.toggle("open", settingsOpen);
+        if (btn) btn.classList.toggle("open", settingsOpen);
+        applyHeight();
+        if (settingsOpen) attachOutsideCloser();
+        else detachOutsideCloser();
+      }
+      function attachOutsideCloser() {
+        detachOutsideCloser();
+        const doc = activeDoc || document;
+        outsideCloser = (e) => {
+          const pop = $("settingsPop");
+          const btn = $("settingsBtn");
+          if (!pop || !btn) return;
+          if (pop.contains(e.target) || btn.contains(e.target)) return;
+          setSettingsOpen(false);
+        };
+        doc.addEventListener("pointerdown", outsideCloser, true);
+      }
+      function detachOutsideCloser() {
+        if (!outsideCloser) return;
+        const doc = activeDoc || document;
+        try { doc.removeEventListener("pointerdown", outsideCloser, true); } catch {}
+        outsideCloser = null;
+      }
+
+      // ---------- Learn-from-edits helpers ----------
+      const LATIN_TOKEN_RE = /[A-Za-z][A-Za-z0-9_+\-]{1,30}/g;
       function tokenizeLatin(text) {
         const out = new Set();
         if (!text) return out;
@@ -964,7 +1183,6 @@
         for (const m of matches) out.add(m);
         return out;
       }
-
       function looksLikeProperNoun(word) {
         if (word.length < 2) return false;
         if (/\d/.test(word)) return true;
@@ -973,7 +1191,6 @@
         if (/^[A-Z][a-z]+$/.test(word) && word.length >= 3) return true;
         return false;
       }
-
       function extractLearnCandidates(rawText, editedText, existingVocab) {
         if (!rawText || !editedText) return [];
         const rawTokens = tokenizeLatin(rawText);
@@ -998,7 +1215,6 @@
         }
         return candidates;
       }
-
       function refreshLearnButton() {
         const btn = $("learnBtn");
         if (!btn) return;
@@ -1020,6 +1236,7 @@
           : "没有发现需要学习的新词";
       }
 
+      // ---------- MediaRecorder ----------
       function pickMimeType() {
         const candidates = [
           "audio/webm;codecs=opus",
@@ -1037,7 +1254,7 @@
         try {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (err) {
-          setStatus("无法访问麦克风:" + (err.message || err), "error");
+          setStatus("无法访问麦克风：" + (err.message || err), "error");
           return;
         }
         const mimeType = pickMimeType();
@@ -1045,18 +1262,13 @@
         try {
           mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         } catch (err) {
-          setStatus("MediaRecorder 创建失败:" + (err.message || err), "error");
+          setStatus("MediaRecorder 创建失败：" + (err.message || err), "error");
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size) chunks.push(e.data);
-        };
+        mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
         mediaRecorder.onstop = async () => {
-          if (stream) {
-            stream.getTracks().forEach((t) => t.stop());
-            stream = null;
-          }
+          if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
           const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
           chunks = [];
           await upload(blob);
@@ -1102,16 +1314,14 @@
             ta.select();
             const ok = doc.execCommand("copy");
             ta.remove();
-            if (ok) {
-              setStatus("已复制 ✓", "ok");
-              return true;
-            }
+            if (ok) { setStatus("已复制 ✓", "ok"); return true; }
           } catch {}
-          setStatus("复制失败,请手动点复制", "error");
+          setStatus("复制失败，请手动点复制", "error");
           return false;
         }
       }
 
+      // ---------- Long-press stop menu ----------
       function showOptionsMenu() {
         menuActive = true;
         const doc = activeDoc || document;
@@ -1121,7 +1331,6 @@
         const win = doc.defaultView || window;
         const width = Math.max(rect.width, 180);
         const left = Math.max(8, rect.left + rect.width / 2 - width / 2);
-
         menuEl = doc.createElement("div");
         menuEl.className = "stop-menu";
         menuEl.innerHTML =
@@ -1132,15 +1341,10 @@
         menuEl.style.bottom = (win.innerHeight - rect.top + 8) + "px";
         doc.body.appendChild(menuEl);
       }
-
       function hideOptionsMenu() {
         menuActive = false;
-        if (menuEl) {
-          menuEl.remove();
-          menuEl = null;
-        }
+        if (menuEl) { menuEl.remove(); menuEl = null; }
       }
-
       function pickChoice(x, y) {
         const doc = activeDoc || document;
         const el = doc.elementFromPoint(x, y);
@@ -1148,7 +1352,6 @@
         const opt = el.closest && el.closest(".stop-opt");
         return opt ? opt.getAttribute("data-mode") : null;
       }
-
       function updateHighlight(x, y) {
         if (!menuEl) return;
         const choice = pickChoice(x, y);
@@ -1183,9 +1386,7 @@
           showOptionsMenu();
         }, LONG_PRESS_MS);
 
-        const onMove = (ev) => {
-          if (menuActive) updateHighlight(ev.clientX, ev.clientY);
-        };
+        const onMove = (ev) => { if (menuActive) updateHighlight(ev.clientX, ev.clientY); };
         const onUp = (ev) => {
           doc.removeEventListener("pointermove", onMove);
           doc.removeEventListener("pointerup", onUp);
@@ -1207,16 +1408,14 @@
         doc.addEventListener("pointercancel", onUp);
       }
 
+      // ---------- Upload (transcribe + refine) ----------
       async function upload(blob) {
         const vocabItems = loadVocabItems();
         const creds = getDirectCreds();
         lastRawText = "";
         lastRefinedText = "";
         if (byoOnly && !creds) {
-          setStatus(
-            "这是公开版,需要先配置直连 API · 用自己的额度",
-            "error",
-          );
+          setStatus("这是公开版，需要先配置直连 API · 用自己的额度", "error");
           resetRecordButton();
           if (typeof openByoModal === "function") openByoModal();
           return;
@@ -1242,22 +1441,21 @@
                 }
               } catch (err) {
                 console.error(err);
-                setStatus("refine 失败,使用原始转写:" + (err.message || err), "error");
+                setStatus("refine 失败，使用原始转写：" + (err.message || err), "error");
               }
             } else {
               lastRawText = raw;
             }
             setResult(finalText || "(模型返回空)");
+            if (finalText) setExpanded(true);
             const vocabHint = vocabItems.length ? " · 词典 " + vocabItems.length : "";
             const headline = refineLabel
               ? "完成 · 直连 ✓ · " + refineLabel + " (Cerebras)"
               : "完成 · 直连 ✓";
             setStatus(headline + vocabHint, "ok");
-            if (autoCopyPending && finalText) {
-              await copyToClipboard(finalText);
-            }
+            if (autoCopyPending && finalText) await copyToClipboard(finalText);
           } catch (err) {
-            setStatus("直连失败:" + (err.message || err), "error");
+            setStatus("直连失败：" + (err.message || err), "error");
           } finally {
             autoCopyPending = false;
             resetRecordButton();
@@ -1268,9 +1466,7 @@
           const modeSel = $("modeSel");
           const mode = (modeSel && modeSel.value) || "clean";
           const params = new URLSearchParams({ mode });
-          if (vocabItems.length) {
-            params.set("vocab", buildVocabPrompt(vocabItems));
-          }
+          if (vocabItems.length) params.set("vocab", buildVocabPrompt(vocabItems));
           const res = await fetch("/api/transcribe?" + params.toString(), {
             method: "POST",
             headers: { "Content-Type": blob.type || "audio/webm" },
@@ -1278,21 +1474,20 @@
           });
           const data = await res.json();
           if (!res.ok) {
-            setStatus("失败:" + (data.error || res.statusText), "error");
+            setStatus("失败：" + (data.error || res.statusText), "error");
           } else {
             const text = data.text || data.transcription_text || "";
             lastRawText = (data.raw || text || "").trim();
             lastRefinedText = data.refined ? text : "";
             setResult(text || "(模型返回空)");
+            if (text) setExpanded(true);
             const baseLabel = data.label ? "完成 · " + data.label + " ✓" : "完成 ✓";
             const vocabHint = vocabItems.length ? " · 词典 " + vocabItems.length : "";
             setStatus(baseLabel + vocabHint, "ok");
-            if (autoCopyPending && text) {
-              await copyToClipboard(text);
-            }
+            if (autoCopyPending && text) await copyToClipboard(text);
           }
         } catch (err) {
-          setStatus("请求失败:" + (err.message || err), "error");
+          setStatus("请求失败：" + (err.message || err), "error");
         } finally {
           autoCopyPending = false;
           resetRecordButton();
@@ -1310,19 +1505,43 @@
         mediaRecorder = null;
       }
 
+      // ---------- Modal helpers (modals always live in main document) ----------
+      function focusMainWindow() {
+        // When user clicks a modal trigger from inside the PiP, the modal
+        // lives in the main page. Pull the main window forward so the user
+        // sees it instead of staring at an unchanged PiP.
+        try { if (pipWindow && !pipWindow.closed) window.focus(); } catch {}
+      }
+      function openMainModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        focusMainWindow();
+        modal.hidden = false;
+      }
+      function closeMainModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.hidden = true;
+      }
+
+      // ---------- Wire controls inside the active doc (main preview or PiP) ----------
       function wireControls() {
-        const doc0 = activeDoc || document;
-        Array.from(doc0.body.children).forEach((el) => {
-          if (el && el.id === "vocabModal") el.remove();
-        });
-        const sel = $("modeSel");
-        if (sel) sel.value = localStorage.getItem("refineMode") || "clean";
+        // Record button
         const recBtn = $("recordBtn");
-        recBtn.onclick = null;
-        recBtn.onpointerdown = onRecordPointerDown;
-        if (sel) sel.onchange = () => {
-          try { localStorage.setItem("refineMode", sel.value); } catch {}
-        };
+        if (recBtn) {
+          recBtn.onclick = null;
+          recBtn.onpointerdown = onRecordPointerDown;
+        }
+
+        // Refine mode select
+        const sel = $("modeSel");
+        if (sel) {
+          sel.value = localStorage.getItem("refineMode") || "clean";
+          sel.onchange = () => {
+            try { localStorage.setItem("refineMode", sel.value); } catch {}
+          };
+        }
+
+        // Auto-copy toggle
         const chk = $("autoCopyChk");
         if (chk) {
           const saved = localStorage.getItem("autoCopy");
@@ -1331,154 +1550,69 @@
             try { localStorage.setItem("autoCopy", chk.checked ? "1" : "0"); } catch {}
           };
         }
+
+        // Result editing
         const resultEl = $("result");
         if (resultEl) {
           resultEl.oninput = () => {
             const c = $("copyBtn");
             if (c) c.disabled = !resultEl.textContent.trim();
+            updateLastTip();
             refreshLearnButton();
           };
         }
-        $("copyBtn").onclick = async () => {
-          const text = $("result").textContent;
-          await copyToClipboard(text);
-        };
 
-        const vocabInput = $("vocabInput");
-        const vocabCount = $("vocabCount");
-        const vocabCountBadge = $("vocabCountBadge");
+        // Copy button (inside result head)
+        const copyBtn = $("copyBtn");
+        if (copyBtn) {
+          copyBtn.onclick = async () => {
+            const r = $("result");
+            await copyToClipboard(r ? r.textContent : "");
+          };
+        }
+
+        // "Last result" capsule: toggle expanded
+        const lastBtn = $("lastBtn");
+        if (lastBtn) {
+          lastBtn.onclick = () => setExpanded(!resultExpanded);
+          lastBtn.onkeydown = (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setExpanded(!resultExpanded);
+            }
+          };
+        }
+
+        // Settings gear: toggle settings panel
+        const settingsBtn = $("settingsBtn");
+        if (settingsBtn) settingsBtn.onclick = () => setSettingsOpen(!settingsOpen);
+
+        // Settings → custom vocab button (opens main-doc modal)
         const vocabBtn = $("vocabBtn");
-        const vocabModal = $("vocabModal");
-        const vocabClose = $("vocabClose");
-        const vocabDone = $("vocabDone");
+        if (vocabBtn) vocabBtn.onclick = () => { setSettingsOpen(false); openMainModal("vocabModal"); };
 
-        const syncVocabCount = () => {
-          const n = parseVocab(vocabInput ? vocabInput.value : "").length;
-          if (vocabCount) vocabCount.textContent = n;
-          if (vocabCountBadge) {
-            vocabCountBadge.textContent = n;
-            vocabCountBadge.classList.toggle("active", n > 0);
-          }
-        };
-        const openVocab = () => {
-          if (!vocabModal) return;
-          vocabModal.hidden = false;
-          if (vocabInput) setTimeout(() => vocabInput.focus(), 0);
-        };
-        const closeVocab = () => {
-          if (vocabModal) vocabModal.hidden = true;
-        };
-
-        if (vocabInput) {
-          try { vocabInput.value = localStorage.getItem("customVocab") || ""; } catch {}
-          syncVocabCount();
-          vocabInput.oninput = () => {
-            try { localStorage.setItem("customVocab", vocabInput.value); } catch {}
-            syncVocabCount();
-          };
-        }
-        const doc = activeDoc || document;
-        if (vocabModal && vocabModal.parentNode !== doc.body) {
-          doc.body.appendChild(vocabModal);
-        }
-        if (vocabBtn) vocabBtn.onclick = openVocab;
-        if (vocabClose) vocabClose.onclick = closeVocab;
-        if (vocabDone) vocabDone.onclick = closeVocab;
-        if (vocabModal) {
-          vocabModal.onclick = (e) => { if (e.target === vocabModal) closeVocab(); };
-        }
-        doc.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && vocabModal && !vocabModal.hidden) closeVocab();
-        });
-
+        // Settings → learn-from-edits button
         const learnBtn = $("learnBtn");
-        const learnModal = $("learnModal");
-        const learnList = $("learnList");
-        const learnClose = $("learnClose");
-        const learnCancel = $("learnCancel");
-        const learnConfirm = $("learnConfirm");
+        if (learnBtn) learnBtn.onclick = () => { setSettingsOpen(false); openLearnModal(); };
 
-        Array.from(doc0.body.children).forEach((el) => {
-          if (el && el.id === "learnModal") el.remove();
-        });
-        if (learnModal && learnModal.parentNode !== doc.body) {
-          doc.body.appendChild(learnModal);
-        }
-        const closeLearn = () => { if (learnModal) learnModal.hidden = true; };
-        const openLearn = () => {
-          if (!learnModal || !learnList) return;
-          const current = (resultEl ? resultEl.textContent : "").trim();
-          const vocab = loadVocabItems();
-          const candidates = extractLearnCandidates(lastRawText, current, vocab);
-          learnList.innerHTML = "";
-          if (candidates.length === 0) {
-            const empty = doc.createElement("div");
-            empty.className = "learn-empty";
-            empty.textContent = "没找到需要学习的新词。";
-            learnList.appendChild(empty);
-            if (learnConfirm) learnConfirm.disabled = true;
-          } else {
-            for (const cand of candidates) {
-              const row = doc.createElement("label");
-              row.className = "learn-item";
-              const cb = doc.createElement("input");
-              cb.type = "checkbox";
-              cb.checked = true;
-              cb.value = cand.word;
-              const word = doc.createElement("span");
-              word.className = "learn-item-word";
-              word.textContent = cand.word;
-              const tag = doc.createElement("span");
-              tag.style.cssText = "margin-left:auto;font-size:11px;color:var(--faint)";
-              tag.textContent = cand.kind === "casing" ? "改大小写" : "新增";
-              row.appendChild(cb);
-              row.appendChild(word);
-              row.appendChild(tag);
-              learnList.appendChild(row);
-            }
-            if (learnConfirm) learnConfirm.disabled = false;
-          }
-          learnModal.hidden = false;
-        };
-        const applyLearn = () => {
-          if (!learnList || !vocabInput) {
-            closeLearn();
-            return;
-          }
-          const picked = [];
-          learnList.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-            if (cb.checked && cb.value) picked.push(cb.value);
-          });
-          if (picked.length) {
-            const existing = parseVocab(vocabInput.value || "");
-            const existingLc = new Set(existing.map((w) => w.toLowerCase()));
-            const merged = existing.slice();
-            for (const w of picked) {
-              if (!existingLc.has(w.toLowerCase())) {
-                merged.push(w);
-                existingLc.add(w.toLowerCase());
-              }
-            }
-            vocabInput.value = merged.join("\n");
-            try { localStorage.setItem("customVocab", vocabInput.value); } catch {}
-            syncVocabCount();
-            setStatus("已加入词典 " + picked.length + " 个词,下次录音生效", "ok");
-            refreshLearnButton();
-          }
-          closeLearn();
-        };
+        // Settings → direct API button
+        const apiBtn = $("apiSettingsBtn");
+        if (apiBtn) apiBtn.onclick = () => { setSettingsOpen(false); openApiModal(); };
 
-        if (learnBtn) learnBtn.onclick = openLearn;
-        if (learnClose) learnClose.onclick = closeLearn;
-        if (learnCancel) learnCancel.onclick = closeLearn;
-        if (learnConfirm) learnConfirm.onclick = applyLearn;
-        if (learnModal) {
-          learnModal.onclick = (e) => { if (e.target === learnModal) closeLearn(); };
+        // Sync vocab badge count
+        const vocabCountBadge = $("vocabCountBadge");
+        if (vocabCountBadge) {
+          const n = loadVocabItems().length;
+          vocabCountBadge.textContent = n;
+          vocabCountBadge.classList.toggle("active", n > 0);
         }
-        doc.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && learnModal && !learnModal.hidden) closeLearn();
-        });
+
+        // Sync api badge
+        updateApiBadge();
+        updateLastTip();
         refreshLearnButton();
+        setExpanded(resultExpanded);
+        setSettingsOpen(false);
       }
 
       function copyStyles(targetDoc) {
@@ -1491,32 +1625,41 @@
         pipSlot.innerHTML = "";
         pipSlot.appendChild(tpl.content.cloneNode(true));
         activeDoc = document;
+        // Reset expansion state for the fresh DOM
+        resultExpanded = false;
+        settingsOpen = false;
         wireControls();
       }
 
       async function openPiP() {
         if (!("documentPictureInPicture" in window)) {
-          hintEl.textContent = "当前浏览器不支持独立画中画(需 Chrome / Edge 116+)。右侧预览功能一致,可直接录音使用。";
+          hintEl.textContent = "当前浏览器不支持独立画中画（需 Chrome / Edge 116+）。右侧预览功能一致，可直接录音使用。";
           return;
         }
         try {
           pipWindow = await documentPictureInPicture.requestWindow({
-            width: 372,
-            height: 340,
+            width: PIP_W,
+            height: PIP_H_COLLAPSED,
           });
         } catch (err) {
-          hintEl.textContent = "无法弹出独立小窗:" + (err.message || err) + "。右侧预览功能完全一致,可直接使用。";
+          hintEl.textContent = "无法弹出独立小窗：" + (err.message || err) + "。右侧预览功能完全一致，可直接使用。";
           return;
         }
         pipSlot.innerHTML = '<div class="pip-note">已在画中画小窗中打开 ✨<br>关闭那个小窗即可在此恢复预览。</div>';
         copyStyles(pipWindow.document);
-        pipWindow.document.body.style.padding = "16px";
+        pipWindow.document.body.style.margin = "0";
+        pipWindow.document.body.style.padding = "0";
+        pipWindow.document.body.style.background = "transparent";
+        // Mount only the inner #panel inside the PiP (no pip-bar — the OS provides it)
         pipWindow.document.body.appendChild(tpl.content.cloneNode(true));
         activeDoc = pipWindow.document;
+        resultExpanded = false;
+        settingsOpen = false;
         wireControls();
+        applyHeight();
 
         popBtn.disabled = true;
-        popBtn.textContent = "已弹出(可拖到任意角)";
+        popBtn.textContent = "已弹出（可拖到任意角）";
 
         pipWindow.addEventListener("pagehide", () => {
           if (mediaRecorder && mediaRecorder.state === "recording") {
@@ -1529,65 +1672,171 @@
         });
       }
 
-      function wireApiSettings() {
-        const btn = document.getElementById("apiSettingsBtn");
-        const modal = document.getElementById("apiModal");
-        const close = document.getElementById("apiClose");
-        const save = document.getElementById("apiSave");
-        const clear = document.getElementById("apiClear");
-        const accInput = document.getElementById("apiAccountInput");
-        const tokInput = document.getElementById("apiTokenInput");
-        const cerebrasInput = document.getElementById("apiCerebrasInput");
-        if (!btn || !modal) return;
+      // ---------- Main-document modal wiring ----------
+      const apiModal = document.getElementById("apiModal");
+      const vocabModal = document.getElementById("vocabModal");
+      const learnModal = document.getElementById("learnModal");
+      const vocabInput = document.getElementById("vocabInput");
+      const vocabCount = document.getElementById("vocabCount");
+      const learnList = document.getElementById("learnList");
+      const learnConfirm = document.getElementById("learnConfirm");
 
-        const open = () => {
-          try {
-            accInput.value = localStorage.getItem("cfAccountId") || "";
-            tokInput.value = localStorage.getItem("cfApiToken") || "";
-            if (cerebrasInput) cerebrasInput.value = localStorage.getItem("cerebrasApiKey") || "";
-          } catch {}
-          modal.hidden = false;
-          setTimeout(() => accInput && accInput.focus(), 0);
-        };
-        const hide = () => { modal.hidden = true; };
+      function syncMainVocabCount() {
+        if (!vocabInput) return;
+        const n = parseVocab(vocabInput.value).length;
+        if (vocabCount) vocabCount.textContent = n;
+        // Reflect on whichever badge is currently mounted (preview or PiP)
+        const badge = $("vocabCountBadge");
+        if (badge) {
+          badge.textContent = n;
+          badge.classList.toggle("active", n > 0);
+        }
+      }
 
-        btn.onclick = open;
-        openByoModal = open;
-        if (close) close.onclick = hide;
-        modal.onclick = (e) => { if (e.target === modal) hide(); };
-        if (save) save.onclick = () => {
+      function openApiModal() {
+        const acc = document.getElementById("apiAccountInput");
+        const tok = document.getElementById("apiTokenInput");
+        const cer = document.getElementById("apiCerebrasInput");
+        try {
+          if (acc) acc.value = localStorage.getItem("cfAccountId") || "";
+          if (tok) tok.value = localStorage.getItem("cfApiToken") || "";
+          if (cer) cer.value = localStorage.getItem("cerebrasApiKey") || "";
+        } catch {}
+        focusMainWindow();
+        apiModal.hidden = false;
+        setTimeout(() => acc && acc.focus(), 0);
+      }
+
+      function openLearnModal() {
+        const resultEl = $("result");
+        const current = (resultEl ? resultEl.textContent : "").trim();
+        const vocab = loadVocabItems();
+        const candidates = extractLearnCandidates(lastRawText, current, vocab);
+        learnList.innerHTML = "";
+        if (candidates.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "learn-empty";
+          empty.textContent = "没找到需要学习的新词。";
+          learnList.appendChild(empty);
+          if (learnConfirm) learnConfirm.disabled = true;
+        } else {
+          for (const cand of candidates) {
+            const row = document.createElement("label");
+            row.className = "learn-item";
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked = true;
+            cb.value = cand.word;
+            const word = document.createElement("span");
+            word.className = "learn-item-word";
+            word.textContent = cand.word;
+            const tag = document.createElement("span");
+            tag.style.cssText = "margin-left:auto;font-size:11px;color:var(--faint)";
+            tag.textContent = cand.kind === "casing" ? "改大小写" : "新增";
+            row.appendChild(cb);
+            row.appendChild(word);
+            row.appendChild(tag);
+            learnList.appendChild(row);
+          }
+          if (learnConfirm) learnConfirm.disabled = false;
+        }
+        focusMainWindow();
+        learnModal.hidden = false;
+      }
+
+      function applyLearn() {
+        if (!learnList || !vocabInput) {
+          learnModal.hidden = true;
+          return;
+        }
+        const picked = [];
+        learnList.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+          if (cb.checked && cb.value) picked.push(cb.value);
+        });
+        if (picked.length) {
+          const existing = parseVocab(vocabInput.value || "");
+          const existingLc = new Set(existing.map((w) => w.toLowerCase()));
+          const merged = existing.slice();
+          for (const w of picked) {
+            if (!existingLc.has(w.toLowerCase())) {
+              merged.push(w);
+              existingLc.add(w.toLowerCase());
+            }
+          }
+          vocabInput.value = merged.join("\n");
+          try { localStorage.setItem("customVocab", vocabInput.value); } catch {}
+          syncMainVocabCount();
+          setStatus("已加入词典 " + picked.length + " 个词，下次录音生效", "ok");
+          refreshLearnButton();
+        }
+        learnModal.hidden = true;
+      }
+
+      function wireMainDocModals() {
+        // Vocab modal
+        if (vocabInput) {
+          try { vocabInput.value = localStorage.getItem("customVocab") || ""; } catch {}
+          syncMainVocabCount();
+          vocabInput.oninput = () => {
+            try { localStorage.setItem("customVocab", vocabInput.value); } catch {}
+            syncMainVocabCount();
+          };
+        }
+        document.getElementById("vocabClose").onclick = () => (vocabModal.hidden = true);
+        document.getElementById("vocabDone").onclick = () => (vocabModal.hidden = true);
+        vocabModal.onclick = (e) => { if (e.target === vocabModal) vocabModal.hidden = true; };
+
+        // Learn modal
+        document.getElementById("learnClose").onclick = () => (learnModal.hidden = true);
+        document.getElementById("learnCancel").onclick = () => (learnModal.hidden = true);
+        learnConfirm.onclick = applyLearn;
+        learnModal.onclick = (e) => { if (e.target === learnModal) learnModal.hidden = true; };
+
+        // API modal
+        const apiClose = document.getElementById("apiClose");
+        const apiSave = document.getElementById("apiSave");
+        const apiClear = document.getElementById("apiClear");
+        const acc = document.getElementById("apiAccountInput");
+        const tok = document.getElementById("apiTokenInput");
+        const cer = document.getElementById("apiCerebrasInput");
+        apiClose.onclick = () => (apiModal.hidden = true);
+        apiModal.onclick = (e) => { if (e.target === apiModal) apiModal.hidden = true; };
+        apiSave.onclick = () => {
           try {
-            const acc = accInput.value.trim();
-            const tok = tokInput.value.trim();
-            const cerebras = cerebrasInput ? cerebrasInput.value.trim() : "";
-            if (acc) localStorage.setItem("cfAccountId", acc);
+            const accountId = acc.value.trim();
+            const token = tok.value.trim();
+            const cerebras = cer ? cer.value.trim() : "";
+            if (accountId) localStorage.setItem("cfAccountId", accountId);
             else localStorage.removeItem("cfAccountId");
-            if (tok) localStorage.setItem("cfApiToken", tok);
+            if (token) localStorage.setItem("cfApiToken", token);
             else localStorage.removeItem("cfApiToken");
             if (cerebras) localStorage.setItem("cerebrasApiKey", cerebras);
             else localStorage.removeItem("cerebrasApiKey");
           } catch {}
           updateApiBadge();
           refreshByoBannerVisibility();
-          hide();
+          apiModal.hidden = true;
         };
-        if (clear) clear.onclick = () => {
+        apiClear.onclick = () => {
           try {
             localStorage.removeItem("cfAccountId");
             localStorage.removeItem("cfApiToken");
             localStorage.removeItem("cerebrasApiKey");
           } catch {}
-          if (accInput) accInput.value = "";
-          if (tokInput) tokInput.value = "";
-          if (cerebrasInput) cerebrasInput.value = "";
+          if (acc) acc.value = "";
+          if (tok) tok.value = "";
+          if (cer) cer.value = "";
           updateApiBadge();
           refreshByoBannerVisibility();
         };
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && !modal.hidden) hide();
-        });
+        openByoModal = openApiModal;
 
-        updateApiBadge();
+        document.addEventListener("keydown", (e) => {
+          if (e.key !== "Escape") return;
+          if (!apiModal.hidden) apiModal.hidden = true;
+          else if (!vocabModal.hidden) vocabModal.hidden = true;
+          else if (!learnModal.hidden) learnModal.hidden = true;
+        });
       }
 
       function injectByoBanner() {
@@ -1596,19 +1845,17 @@
         const banner = document.createElement("div");
         banner.id = "byoBanner";
         banner.style.cssText =
-          "margin:12px 0;padding:10px 14px;border:1px solid #f0c987;background:#fff7e6;color:#7a4b00;border-radius:10px;font-size:14px;line-height:1.5";
+          "margin:0 0 4px;padding:10px 14px;border:1px solid #E8C58E;background:#FFF7E6;color:#7A4B00;border-radius:10px;font-size:12.5px;line-height:1.55";
         banner.innerHTML =
-          '<strong>公开社区版</strong> · 这个网址不消耗作者的 Workers AI 额度。请先点 <strong>⚙ 直连 API · 用自己的额度</strong> 填入你自己的 Cloudflare 凭据后再使用。';
+          '<strong>公开社区版</strong> · 这个网址不消耗作者的 Workers AI 额度。请先在画中画小窗里点 <strong>⚙ → 直连 API · 用自己的额度</strong> 填入你自己的 Cloudflare 凭据后再使用。';
         host.insertBefore(banner, host.firstChild);
       }
-
       function refreshByoBannerVisibility() {
         const existing = document.getElementById("byoBanner");
         const shouldShow = byoOnly && !getDirectCreds();
         if (shouldShow && !existing) injectByoBanner();
         else if (!shouldShow && existing) existing.remove();
       }
-
       async function bootstrapConfig() {
         try {
           const res = await fetch("/api/config", { cache: "no-store" });
@@ -1624,8 +1871,9 @@
         }
       }
 
+      // ---------- Boot ----------
       popBtn.addEventListener("click", openPiP);
-      wireApiSettings();
+      wireMainDocModals();
       mountPreview();
       bootstrapConfig();
     </script>
