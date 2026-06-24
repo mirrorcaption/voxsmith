@@ -219,6 +219,23 @@
         color: var(--accent);
         transform: rotate(35deg);
       }
+      .icon-btn.polish-clip {
+        background: var(--inset);
+        border: 1px solid var(--line);
+        color: var(--accent);
+      }
+      .icon-btn.polish-clip:hover:not(:disabled) {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .icon-btn.polish-clip.busy {
+        animation: polishPulse 1.2s ease-in-out infinite;
+      }
+      @keyframes polishPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.45; }
+      }
 
       /* ---------- Actions row (collapsed default state) ---------- */
       .actions {
@@ -894,6 +911,7 @@
         <!-- C. Action row -->
         <div class="actions">
           <button id="recordBtn" class="primary">开始说话</button>
+          <button id="polishClipBtn" class="icon-btn polish-clip" title="校对 + 轻润色剪贴板内容（保留原意/语气/长度，按母语习惯改写）" aria-label="润色剪贴板"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4"></path><path d="M3 5h4"></path><path d="M19 17v4"></path><path d="M17 19h4"></path><path d="m13.5 6.5 4 4-9 9-4-4 9-9z"></path></svg></button>
           <div id="lastBtn" class="last-strip" role="button" tabindex="0" aria-expanded="false" aria-label="切换上次结果">
             <span class="ls-text">上次结果</span>
             <svg class="ls-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
@@ -1066,6 +1084,71 @@
             ? data.choices[0].message.content
             : null;
         return typeof content === "string" && content.trim() ? content.trim() : null;
+      }
+
+      async function refineViaWorker(rawText, mode, vocabItems) {
+        const res = await fetch("/api/refine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: rawText, mode, vocab: vocabItems || [] }),
+        });
+        let data = null;
+        try { data = await res.json(); } catch {}
+        if (!res.ok) {
+          const msg = (data && data.error) || ("HTTP " + res.status + " " + res.statusText);
+          throw new Error(msg);
+        }
+        return data && typeof data.text === "string" ? data.text : null;
+      }
+
+      async function polishClipboard() {
+        const btn = $("polishClipBtn");
+        if (!btn || btn.disabled) return;
+        const doc = activeDoc || document;
+        const win = doc.defaultView || window;
+        let clip = "";
+        try {
+          clip = await win.navigator.clipboard.readText();
+        } catch (err) {
+          setStatus("无法读取剪贴板：" + (err.message || err) + "（需要剪贴板读取权限）", "error");
+          return;
+        }
+        const trimmed = (clip || "").trim();
+        if (!trimmed) {
+          setStatus("剪贴板为空，无法润色", "error");
+          return;
+        }
+        const vocabItems = loadVocabItems();
+        const cerebrasKey = getCerebrasKey();
+        btn.disabled = true;
+        btn.classList.add("busy");
+        const provider = cerebrasKey ? "Cerebras" : "Worker";
+        setStatus("润色剪贴板中… (" + provider + ")");
+        try {
+          let refined = null;
+          if (cerebrasKey) {
+            refined = await refineWithCerebras(trimmed, "proofread", vocabItems, cerebrasKey);
+          } else {
+            refined = await refineViaWorker(trimmed, "proofread", vocabItems);
+          }
+          if (!refined) {
+            setStatus("润色失败：模型返回空", "error");
+            return;
+          }
+          lastRawText = trimmed;
+          lastRefinedText = refined;
+          setResult(refined);
+          setExpanded(true);
+          const copied = await copyToClipboard(refined);
+          const vocabHint = vocabItems.length ? " · 词典 " + vocabItems.length : "";
+          const suffix = copied ? " · 已写回剪贴板" : "";
+          setStatus("完成 · 已校对 ✓ (" + provider + ")" + suffix + vocabHint, "ok");
+        } catch (err) {
+          setStatus("润色失败：" + (err.message || err), "error");
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove("busy");
+        }
       }
 
       async function uploadDirect(blob, creds, vocabItems) {
@@ -1530,6 +1613,12 @@
         if (recBtn) {
           recBtn.onclick = null;
           recBtn.onpointerdown = onRecordPointerDown;
+        }
+
+        // Polish clipboard button
+        const polishBtn = $("polishClipBtn");
+        if (polishBtn) {
+          polishBtn.onclick = polishClipboard;
         }
 
         // Refine mode select

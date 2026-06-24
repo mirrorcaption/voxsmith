@@ -19,6 +19,7 @@ function isByoOnly(env: Env): boolean {
 }
 
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+const MAX_REFINE_CHARS = 12000;
 const MAX_PROMPT_CHARS = 800;
 const MAX_VOCAB_ENTRIES = 64;
 const WHISPER_MODEL = "@cf/openai/whisper-large-v3-turbo";
@@ -245,6 +246,64 @@ async function handleTranscribe(request: Request, env: Env): Promise<Response> {
   });
 }
 
+interface RefineRequestBody {
+  text?: unknown;
+  mode?: unknown;
+  vocab?: unknown;
+}
+
+async function handleRefine(request: Request, env: Env): Promise<Response> {
+  let body: RefineRequestBody;
+  try {
+    body = (await request.json()) as RefineRequestBody;
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const text = typeof body.text === "string" ? body.text.trim() : "";
+  if (!text) {
+    return Response.json({ error: "Missing text" }, { status: 400 });
+  }
+  if (text.length > MAX_REFINE_CHARS) {
+    return Response.json(
+      { error: `Text too long. Limit is ${MAX_REFINE_CHARS} chars.` },
+      { status: 413 },
+    );
+  }
+
+  const mode = parseMode(typeof body.mode === "string" ? body.mode : null);
+  if (mode === "raw") {
+    return Response.json({ text, raw: text, mode, refined: false, label: null });
+  }
+
+  const vocabList = Array.isArray(body.vocab)
+    ? body.vocab
+        .filter((v): v is string => typeof v === "string")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, MAX_VOCAB_ENTRIES)
+    : [];
+
+  if (!env.OPENAI_API_KEY) {
+    return Response.json(
+      { error: "Refine 服务未配置（缺少 OPENAI_API_KEY）。请改用 Cerebras 直连。" },
+      { status: 503 },
+    );
+  }
+
+  const refined = await refineText(text, mode, vocabList, env);
+  if (refined === null) {
+    return Response.json({ error: "Refine failed" }, { status: 502 });
+  }
+  return Response.json({
+    text: refined,
+    raw: text,
+    mode,
+    refined: true,
+    label: MODE_LABELS[mode],
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const unauthorized = checkBasicAuth(request, env);
@@ -254,6 +313,18 @@ export default {
 
     if (url.pathname === "/api/config") {
       return Response.json({ byoOnly: isByoOnly(env) });
+    }
+
+    if (url.pathname === "/api/refine") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      try {
+        return await handleRefine(request, env);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        return Response.json({ error: message }, { status: 500 });
+      }
     }
 
     if (url.pathname === "/api/transcribe") {
